@@ -126,7 +126,7 @@
             <label for="project_select" style="font-weight: bold; font-size: 16px;">Filter by Project:</label>
             <select id="project_select">
                 <option value="ALL">All Projects</option>
-                </select>
+            </select>
         </div>
         
         <label class="checkbox-container">
@@ -178,7 +178,6 @@
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                // If ArcGIS flags an authentication or restriction error, dump it immediately
                 if (data.error) {
                     document.getElementById('dashboard_grid').innerHTML = 
                         `<h3 style="color:#ff6b6b;">ArcGIS Error ${data.error.code}: ${data.error.message}</h3>
@@ -269,6 +268,16 @@
                 return;
             }
 
+            let globalMaxLines = 0;
+            projectsToShow.forEach(p => {
+                Object.keys(categoryMap).forEach(col => {
+                    let totalVal = globalProjectMap[p].stages[col].completed + globalProjectMap[p].stages[col].notCompleted;
+                    if (totalVal > globalMaxLines) {
+                        globalMaxLines = totalVal;
+                    }
+                });
+            });
+
             projectsToShow.forEach((p, pIdx) => {
                 let rgbStage = globalProjectMap[p].stages['RGB'];
                 let isFullyComplete = (rgbStage.completed > 0 && rgbStage.notCompleted === 0);
@@ -312,7 +321,6 @@
 
                 if (categoriesAxis.length === 0) return;
 
-                // 2. Create Card Dom Elements
                 let card = document.createElement('div');
                 card.className = 'project-card';
                 
@@ -334,9 +342,8 @@
                 card.appendChild(chartDiv);
                 container.appendChild(card);
 
-                let calcHeight = Math.max(140, categoriesAxis.length * 55);
+                let calcHeight = Math.max(120, categoriesAxis.length * 50);
 
-                // 3. ApexCharts Configurations
                 var options = {
                     series: [
                         { name: 'Completed', data: completedData },
@@ -350,6 +357,12 @@
                         foreColor: '#ccc',
                         toolbar: { show: false }, 
                         animations: { enabled: false }
+                    },
+                    grid: {
+                        padding: {
+                            top: -15, 
+                            bottom: -5  
+                        }
                     },
                     plotOptions: {
                         bar: {
@@ -383,8 +396,12 @@
                     },
                     xaxis: {
                         categories: categoriesAxis,
-                        title: { text: 'Flightlines', style: { color: '#666', fontSize: '11px' } },
-                        labels: { formatter: function (val) { return Math.floor(val); } }
+                        max: globalMaxLines,
+                        tickAmount: globalMaxLines < 15 ? globalMaxLines : undefined, 
+                        // REMOVED: Title text object completely pulled out to collapse dead margin spacing
+                        labels: { 
+                            formatter: function (val) { return Math.floor(val); } 
+                        }
                     },
                     yaxis: {
                         labels: {
