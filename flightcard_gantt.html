@@ -36,7 +36,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-left: 20px;
+            margin-left: 10px;
             font-size: 16px;
             cursor: pointer;
         }
@@ -115,6 +115,58 @@
             padding: 15px;
             background-color: #222;
         }
+        
+        /* Table View Styles */
+        .table-container {
+            padding: 15px;
+            overflow-x: auto;
+        }
+        .project-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            color: #eee;
+        }
+        .project-table th, .project-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        .project-table th {
+            background-color: #2a2a2a;
+            color: #aaa;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .project-table tr:nth-child(even) {
+            background-color: #1e1e1e;
+        }
+        .project-table tr:hover {
+            background-color: #292929;
+        }
+        
+        /* Detailed Grid Modifications */
+        .detailed-table {
+            margin: 0 auto;
+            width: 95%; /* Slightly constrained to make the center alignment visible */
+        }
+        .detailed-table th, .detailed-table td {
+            text-align: center; /* Centers all table text */
+            border: 1px solid #444;
+        }
+        .detailed-table th:first-child, .detailed-table td:first-child {
+            background-color: #2a2a2a;
+        }
+        .detailed-table td {
+            font-family: monospace;
+            font-size: 13px;
+        }
+        
+        .text-green { color: #4caf50; font-weight: bold; }
+        .text-orange { color: #ff7f0e; font-weight: bold; }
+        .text-nr { color: #666; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -126,6 +178,16 @@
             <label for="project_select" style="font-weight: bold; font-size: 16px;">Filter by Project:</label>
             <select id="project_select">
                 <option value="ALL">All Projects</option>
+            </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <label for="view_mode" style="font-weight: bold; font-size: 16px;">View Mode:</label>
+            <select id="view_mode">
+                <option value="charts">Charts Only</option>
+                <option value="summary_table">Summary Table</option>
+                <option value="detailed_table">Detailed Flight Card</option>
+                <option value="all">All Views</option>
             </select>
         </div>
         
@@ -197,12 +259,26 @@
                     if (!proj) return;
 
                     if (!globalProjectMap[proj]) {
-                        globalProjectMap[proj] = { stages: {} };
+                        globalProjectMap[proj] = { stages: {}, lines: [] };
                         Object.keys(categoryMap).forEach(col => {
                             globalProjectMap[proj].stages[col] = { completed: 0, notCompleted: 0 };
                         });
                     }
 
+                    // Extract a line identifier matching the "flightline" schema provided
+                    let lineId = attrs.flightline || (attrs.ObjectId ? `Line ${attrs.ObjectId}` : (attrs.OBJECTID ? `Line ${attrs.OBJECTID}` : "Unknown"));
+                    
+                    // Store line data for detailed view
+                    globalProjectMap[proj].lines.push({
+                        id: lineId,
+                        RGB: attrs['RGB'],
+                        MHW: attrs['NIR_MHW'],
+                        MLLW: attrs['NIR_MLLW'],
+                        BMHW: attrs['NIR_BMHW'],
+                        NT: attrs['NIR']
+                    });
+
+                    // Aggregate counts for summary/charts
                     Object.keys(categoryMap).forEach(col => {
                         let val = attrs[col];
                         let isMissing = (val === null || val === undefined || String(val).trim() === '' || String(val) === 'nan');
@@ -218,17 +294,25 @@
                     });
                 });
 
-                let projects = Object.keys(globalProjectMap).sort();
-                let selectElem = document.getElementById('project_select');
-                projects.forEach(p => {
-                    let opt = document.createElement('option');
-                    opt.value = p;
-                    opt.innerHTML = p;
-                    selectElem.appendChild(opt);
-                });
+                // Init the UI state based on URL parameters and populated data
+                readUrlParams();
 
-                selectElem.addEventListener('change', () => renderDashboard());
-                document.getElementById('hide_completed').addEventListener('change', () => renderDashboard());
+                // Listeners
+                document.getElementById('project_select').addEventListener('change', () => { 
+                    updateUrlParams(); 
+                    renderDashboard(); 
+                });
+                
+                document.getElementById('hide_completed').addEventListener('change', () => { 
+                    updateProjectDropdown(); 
+                    updateUrlParams(); 
+                    renderDashboard(); 
+                });
+                
+                document.getElementById('view_mode').addEventListener('change', () => { 
+                    updateUrlParams(); 
+                    renderDashboard(); 
+                });
 
                 renderDashboard();
             })
@@ -237,7 +321,87 @@
             });
 
         // ==========================================
-        // 3. Multi-Chart Dashboard Rendering
+        // 3. UI Controls & URL Parameter Helpers
+        // ==========================================
+        
+        function updateProjectDropdown() {
+            let selectElem = document.getElementById('project_select');
+            let currentVal = selectElem.value;
+            let hideCompleted = document.getElementById('hide_completed').checked;
+
+            // Reset options
+            selectElem.innerHTML = '<option value="ALL">All Projects</option>';
+
+            let projects = Object.keys(globalProjectMap).sort();
+
+            // Filter out completed projects from dropdown if checkbox is active
+            if (hideCompleted) {
+                projects = projects.filter(p => {
+                    let rgbStage = globalProjectMap[p].stages['RGB'];
+                    return !(rgbStage.completed > 0 && rgbStage.notCompleted === 0);
+                });
+            }
+
+            projects.forEach(p => {
+                let opt = document.createElement('option');
+                opt.value = p;
+                opt.innerHTML = p;
+                selectElem.appendChild(opt);
+            });
+
+            // Retain the current selection if it still exists in the filtered list
+            if (projects.includes(currentVal)) {
+                selectElem.value = currentVal;
+            } else {
+                selectElem.value = 'ALL';
+            }
+        }
+
+        function readUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            const projParam = params.get('project');
+            const hideParam = params.get('hide_completed');
+            const viewParam = params.get('view');
+
+            if (hideParam !== null) {
+                document.getElementById('hide_completed').checked = (hideParam === 'true' || hideParam === '1');
+            }
+            
+            // Re-populate dropdown based on hide setting before assigning the specific project
+            updateProjectDropdown();
+
+            if (projParam) {
+                const selectElem = document.getElementById('project_select');
+                if (Array.from(selectElem.options).some(opt => opt.value === projParam)) {
+                    selectElem.value = projParam;
+                }
+            }
+            
+            if (viewParam) {
+                const viewElem = document.getElementById('view_mode');
+                if (Array.from(viewElem.options).some(opt => opt.value === viewParam)) {
+                    viewElem.value = viewParam;
+                }
+            }
+        }
+
+        function updateUrlParams() {
+            const params = new URLSearchParams();
+            const proj = document.getElementById('project_select').value;
+            const hideComp = document.getElementById('hide_completed').checked;
+            const viewMode = document.getElementById('view_mode').value;
+
+            if (proj !== 'ALL') params.set('project', proj);
+            if (!hideComp) params.set('hide_completed', 'false');
+            if (viewMode !== 'charts') params.set('view', viewMode);
+
+            const queryString = params.toString();
+            const newUrl = window.location.pathname + (queryString ? '?' + queryString : '');
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // ==========================================
+        // 4. Multi-View Dashboard Rendering
         // ==========================================
         function renderDashboard() {
             activeCharts.forEach(chart => chart.destroy());
@@ -245,6 +409,7 @@
 
             let selectedProject = document.getElementById('project_select').value;
             let hideCompleted = document.getElementById('hide_completed').checked;
+            let viewMode = document.getElementById('view_mode').value;
             
             let projectsToShow = [];
             if (selectedProject === 'ALL') {
@@ -289,7 +454,9 @@
                 let localColorsNotComplete = [];
                 
                 let headerBadgesHtml = `<div class="metrics-container">`;
+                let summaryRowsHtml = "";
 
+                // Aggregate Data Processing
                 Object.keys(categoryMap).forEach((col, idx) => {
                     let compVal = globalProjectMap[p].stages[col].completed;
                     let notCompVal = globalProjectMap[p].stages[col].notCompleted;
@@ -299,28 +466,29 @@
                         let displayName = categoryMap[col];
                         let shortName = shortNames[displayName];
                         categoriesAxis.push(displayName);
-                        
                         completedData.push(compVal);
                         notCompletedData.push(notCompVal);
-                        
                         localColorsComplete.push(colorsComplete[idx]);
                         localColorsNotComplete.push(colorsNotComplete[idx]);
 
                         let pct = Math.round((compVal / totalVal) * 100);
                         let badgeClass = (pct === 100) ? 'done' : 'pending';
                         
-                        headerBadgesHtml += `
-                            <div class="status-badge ${badgeClass}">
-                                ${shortName}: ${pct}% (${compVal}/${totalVal})
-                            </div>
+                        headerBadgesHtml += `<div class="status-badge ${badgeClass}">${shortName}: ${pct}% (${compVal}/${totalVal})</div>`;
+                        summaryRowsHtml += `
+                            <tr>
+                                <td><strong>${displayName}</strong> (${shortName})</td>
+                                <td>${compVal}</td>
+                                <td>${notCompVal}</td>
+                                <td>${totalVal}</td>
+                                <td class="${pct === 100 ? 'text-green' : 'text-orange'}">${pct}%</td>
+                            </tr>
                         `;
                     }
                 });
-
                 headerBadgesHtml += `</div>`;
 
-                if (categoriesAxis.length === 0) return;
-
+                // Build Card Container
                 let card = document.createElement('div');
                 card.className = 'project-card';
                 
@@ -333,94 +501,144 @@
                 
                 header.appendChild(titleDiv);
                 header.innerHTML += headerBadgesHtml; 
-                
-                let chartDiv = document.createElement('div');
-                chartDiv.className = 'chart-body';
-                chartDiv.id = `chart_project_${pIdx}`; 
-                
                 card.appendChild(header);
-                card.appendChild(chartDiv);
+
+                // --- 1. Summary Table View ---
+                if (viewMode === 'summary_table' || viewMode === 'all') {
+                    let tableDiv = document.createElement('div');
+                    tableDiv.className = 'table-container';
+                    tableDiv.innerHTML = `
+                        <h4 style="margin: 5px 0 10px; color:#ccc;">Summary Overview</h4>
+                        <table class="project-table">
+                            <thead>
+                                <tr>
+                                    <th>Stage Category</th>
+                                    <th>Completed Lines</th>
+                                    <th>Remaining Lines</th>
+                                    <th>Total Lines</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>${summaryRowsHtml}</tbody>
+                        </table>
+                    `;
+                    card.appendChild(tableDiv);
+                }
+
+                // --- 2. Chart View ---
+                if (viewMode === 'charts' || viewMode === 'all') {
+                    let chartDiv = document.createElement('div');
+                    chartDiv.className = 'chart-body';
+                    chartDiv.id = `chart_project_${pIdx}`; 
+                    card.appendChild(chartDiv);
+                }
+
+                // --- 3. Detailed Flight Card View ---
+                if (viewMode === 'detailed_table' || viewMode === 'all') {
+                    let detailDiv = document.createElement('div');
+                    detailDiv.className = 'table-container';
+                    
+                    // Sort lines alphanumerically
+                    let sortedLines = globalProjectMap[p].lines.sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, {numeric: true}));
+                    
+                    let detailRows = "";
+                    sortedLines.forEach(l => {
+                        const fVal = (v) => {
+                            if (v === null || v === undefined || String(v).trim() === '' || String(v) === 'nan') return '';
+                            if (String(v).trim() === 'N/R') return '<span class="text-nr">N/R</span>';
+                            return v; 
+                        };
+                        
+                        detailRows += `
+                            <tr>
+                                <td style="font-weight:bold; color:#ccc;">${l.id}</td>
+                                <td>${fVal(l.RGB)}</td>
+                                <td>${fVal(l.MHW)}</td>
+                                <td>${fVal(l.MLLW)}</td>
+                                <td>${fVal(l.BMHW)}</td>
+                                <td>${fVal(l.NT)}</td>
+                            </tr>
+                        `;
+                    });
+
+                    detailDiv.innerHTML = `
+                        <h4 style="margin: 10px 0 10px; color:#ccc; text-align: center;">Photographer's Flight Card</h4>
+                        <table class="project-table detailed-table">
+                            <thead>
+                                <tr>
+                                    <th>Flight Line</th>
+                                    <th>Requirements Complete</th>
+                                    <th>MHW</th>
+                                    <th>MLLW</th>
+                                    <th>BMHW</th>
+                                    <th>NT</th>
+                                </tr>
+                            </thead>
+                            <tbody>${detailRows}</tbody>
+                        </table>
+                    `;
+                    card.appendChild(detailDiv);
+                }
+
                 container.appendChild(card);
 
-                let calcHeight = Math.max(120, categoriesAxis.length * 50);
+                // Render Chart if enabled
+                if ((viewMode === 'charts' || viewMode === 'all') && categoriesAxis.length > 0) {
+                    let calcHeight = Math.max(120, categoriesAxis.length * 50);
+                    var options = {
+                        series: [
+                            { name: 'Completed', data: completedData },
+                            { name: 'Not Completed', data: notCompletedData }
+                        ],
+                        chart: {
+                            type: 'bar',
+                            height: calcHeight, 
+                            stacked: true,
+                            background: '#222',
+                            foreColor: '#ccc',
+                            toolbar: { show: false }, 
+                            animations: { enabled: false }
+                        },
+                        grid: { padding: { top: -15, bottom: -5 } },
+                        plotOptions: {
+                            bar: {
+                                horizontal: true,
+                                barHeight: '70%',
+                                dataLabels: { position: 'center' }
+                            }
+                        },
+                        colors: [
+                            function({ seriesIndex, dataPointIndex }) {
+                                return seriesIndex === 0 ? localColorsComplete[dataPointIndex] : localColorsNotComplete[dataPointIndex];
+                            }
+                        ],
+                        fill: {
+                            type: ['solid', 'pattern'],
+                            pattern: { style: 'slantedLines', width: 5, height: 5, strokeWidth: 1.5 }
+                        },
+                        stroke: { width: 1, colors: ['#222'] },
+                        dataLabels: {
+                            enabled: true,
+                            style: { fontSize: '11px', colors: ['#fff'] },
+                            formatter: function (val) { return val > 0 ? val : ""; }
+                        },
+                        xaxis: {
+                            categories: categoriesAxis,
+                            max: globalMaxLines,
+                            tickAmount: globalMaxLines < 15 ? globalMaxLines : undefined, 
+                            labels: { formatter: function (val) { return Math.floor(val); } }
+                        },
+                        yaxis: {
+                            labels: { style: { fontSize: '12px', fontWeight: 'bold' }, maxWidth: 220 }
+                        },
+                        tooltip: { theme: 'dark', shared: true, intersect: false, y: { formatter: function (val) { return val + " lines"; } } },
+                        legend: { show: false } 
+                    };
 
-                var options = {
-                    series: [
-                        { name: 'Completed', data: completedData },
-                        { name: 'Not Completed', data: notCompletedData }
-                    ],
-                    chart: {
-                        type: 'bar',
-                        height: calcHeight, 
-                        stacked: true,
-                        background: '#222',
-                        foreColor: '#ccc',
-                        toolbar: { show: false }, 
-                        animations: { enabled: false }
-                    },
-                    grid: {
-                        padding: {
-                            top: -15, 
-                            bottom: -5  
-                        }
-                    },
-                    plotOptions: {
-                        bar: {
-                            horizontal: true,
-                            barHeight: '70%',
-                            dataLabels: { position: 'center' }
-                        }
-                    },
-                    colors: [
-                        function({ seriesIndex, dataPointIndex }) {
-                            return seriesIndex === 0 ? localColorsComplete[dataPointIndex] : localColorsNotComplete[dataPointIndex];
-                        }
-                    ],
-                    fill: {
-                        type: ['solid', 'pattern'],
-                        pattern: {
-                            style: 'slantedLines',
-                            width: 5,
-                            height: 5,
-                            strokeWidth: 1.5
-                        }
-                    },
-                    stroke: {
-                        width: 1,
-                        colors: ['#222']
-                    },
-                    dataLabels: {
-                        enabled: true,
-                        style: { fontSize: '11px', colors: ['#fff'] },
-                        formatter: function (val) { return val > 0 ? val : ""; }
-                    },
-                    xaxis: {
-                        categories: categoriesAxis,
-                        max: globalMaxLines,
-                        tickAmount: globalMaxLines < 15 ? globalMaxLines : undefined, 
-                        // REMOVED: Title text object completely pulled out to collapse dead margin spacing
-                        labels: { 
-                            formatter: function (val) { return Math.floor(val); } 
-                        }
-                    },
-                    yaxis: {
-                        labels: {
-                            style: { fontSize: '12px', fontWeight: 'bold' },
-                            maxWidth: 220 
-                        }
-                    },
-                    tooltip: {
-                        theme: 'dark',
-                        shared: true,
-                        intersect: false,
-                        y: { formatter: function (val) { return val + " lines"; } }
-                    },
-                    legend: { show: false } 
-                };
-
-                let chart = new ApexCharts(document.querySelector(`#chart_project_${pIdx}`), options);
-                chart.render();
-                activeCharts.push(chart);
+                    let chart = new ApexCharts(document.querySelector(`#chart_project_${pIdx}`), options);
+                    chart.render();
+                    activeCharts.push(chart);
+                }
             });
         }
     </script>
