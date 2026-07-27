@@ -10,7 +10,7 @@
             background-color: #1a1a1a;
             color: #fff;
             margin: 0;
-            padding: 15px 20px; /* Reduced top padding */
+            padding: 15px 20px; 
         }
         
         /* Compact Header */
@@ -49,7 +49,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            margin-left: auto; /* Pushes the checkbox to the right if space allows */
+            margin-left: auto; 
             font-size: 14px;
             font-weight: normal !important;
             cursor: pointer;
@@ -65,7 +65,7 @@
         #dashboard_grid {
             display: flex;
             flex-direction: column;
-            gap: 20px; /* Reduced gap between projects */
+            gap: 20px; 
         }
         .project-card {
             background-color: #222;
@@ -75,7 +75,7 @@
         }
         .project-header {
             background-color: #2d2d2d;
-            padding: 10px 15px; /* Compact header padding */
+            padding: 10px 15px; 
             font-size: 15px;
             font-weight: bold;
             border-bottom: 1px solid #444;
@@ -141,11 +141,11 @@
         .project-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px; /* Compact table text */
+            font-size: 13px; 
             color: #eee;
         }
         .project-table th, .project-table td {
-            padding: 8px 10px; /* Compact table padding */
+            padding: 8px 10px; 
             text-align: left;
             border-bottom: 1px solid #333;
         }
@@ -167,7 +167,7 @@
         /* Detailed Grid Modifications */
         .detailed-table {
             margin: 0 auto;
-            width: 100%; /* Utilize full space on compact views */
+            width: 100%; 
         }
         .detailed-table th, .detailed-table td {
             text-align: center;
@@ -194,6 +194,7 @@
         <div style="display: flex; align-items: center; gap: 8px;">
             <label for="project_select">Filter by Project:</label>
             <select id="project_select">
+                <option value="NONE">Select a Project...</option>
                 <option value="ALL">All Projects</option>
             </select>
         </div>
@@ -225,10 +226,8 @@
         // YOUR INTEGRATED API KEY
         const apiKey = "AAPTa7H7lF7FgRZozhMFwPOd-sQ..T99jVoD9WeupCl2WfaW7sAWpVuOoyLAPvlJrj-RGb63wqvmIRC6jJow45ti2J9e-GkTGDdEPhoDyG94VMx3-Cb0lRNecDI4jPRmHTnco3YikQtIseu8ZzQJ2eXH-WWkxuR20pZES6sZLEUZL9AfoSlJ1E8fHuHaYsOQ-b2fP9KO1XDw3xHmcQKzkfymEGbw4wfzgGcg-27qGJGq3i-nbfaMFpuW87kqwdVFcsP2e98e9J0sKWiJkxSOIeyfq_Iu5glqw-0eYAT1_CNPm5FcM";
         
-        // Dynamically build the final request URL containing the token parameters
         const url = `${featureServiceUrl}?where=1%3D1&outFields=*&f=json&resultRecordCount=2000&token=${apiKey}`;
 
-        // DB Columns -> Display Names
         const categoryMap = {
             'RGB': 'Overall Project Complete',
             'NIR_MHW': 'MHW',
@@ -282,19 +281,15 @@
                         });
                     }
 
-                    // Extract a line identifier matching the "flightline" schema provided
                     let lineId = attrs.flightline || (attrs.ObjectId ? `Line ${attrs.ObjectId}` : (attrs.OBJECTID ? `Line ${attrs.OBJECTID}` : "Unknown"));
                     
-                    // Helper to determine if a tidal value is missing
                     const isMissingVal = (val) => (val === null || val === undefined || String(val).trim() === '' || String(val) === 'nan');
                     
-                    // A line is complete ONLY if all four tidal columns have data (or are marked 'N/R')
                     let isLineComplete = !isMissingVal(attrs['NIR_MHW']) && 
                                          !isMissingVal(attrs['NIR_MLLW']) && 
                                          !isMissingVal(attrs['NIR_BMHW']) && 
                                          !isMissingVal(attrs['NIR']);
 
-                    // Store line data for detailed view
                     globalProjectMap[proj].lines.push({
                         id: lineId,
                         RGB: isLineComplete ? 'Complete' : 'Incomplete', 
@@ -304,7 +299,6 @@
                         NT: attrs['NIR']
                     });
 
-                    // Aggregate counts for summary/charts
                     Object.keys(categoryMap).forEach(col => {
                         if (col === 'RGB') {
                             if (isLineComplete) {
@@ -328,10 +322,8 @@
                     });
                 });
 
-                // Init the UI state based on URL parameters and populated data
                 readUrlParams();
 
-                // Listeners
                 document.getElementById('project_select').addEventListener('change', () => { 
                     updateUrlParams(); 
                     renderDashboard(); 
@@ -363,12 +355,10 @@
             let currentVal = selectElem.value;
             let hideCompleted = document.getElementById('hide_completed').checked;
 
-            // Reset options
-            selectElem.innerHTML = '<option value="ALL">All Projects</option>';
+            selectElem.innerHTML = '<option value="NONE">Select a Project...</option><option value="ALL">All Projects</option>';
 
             let projects = Object.keys(globalProjectMap).sort();
 
-            // Filter out completed projects from dropdown if checkbox is active
             if (hideCompleted) {
                 projects = projects.filter(p => {
                     let rgbStage = globalProjectMap[p].stages['RGB'];
@@ -383,11 +373,10 @@
                 selectElem.appendChild(opt);
             });
 
-            // Retain the current selection if it still exists in the filtered list
-            if (projects.includes(currentVal)) {
+            if (projects.includes(currentVal) || currentVal === 'NONE' || currentVal === 'ALL') {
                 selectElem.value = currentVal;
             } else {
-                selectElem.value = 'ALL';
+                selectElem.value = 'NONE';
             }
         }
 
@@ -396,9 +385,8 @@
             const projParam = params.get('project');
             const hideParam = params.get('hide_completed');
             const viewParam = params.get('view');
-            const hideHeaderParam = params.get('hide_header'); // Check for new parameter
+            const hideHeaderParam = params.get('hide_header'); 
 
-            // Hide the header if requested via URL
             if (hideHeaderParam === 'true' || hideHeaderParam === '1') {
                 document.getElementById('main_header').style.display = 'none';
             }
@@ -407,13 +395,14 @@
                 document.getElementById('hide_completed').checked = (hideParam === 'true' || hideParam === '1');
             }
             
-            // Re-populate dropdown based on hide setting before assigning the specific project
             updateProjectDropdown();
 
             if (projParam) {
                 const selectElem = document.getElementById('project_select');
-                if (Array.from(selectElem.options).some(opt => opt.value === projParam)) {
-                    selectElem.value = projParam;
+                let targetVal = projParam.toLowerCase() === 'none' ? 'NONE' : projParam;
+                
+                if (Array.from(selectElem.options).some(opt => opt.value === targetVal)) {
+                    selectElem.value = targetVal;
                 }
             }
             
@@ -431,8 +420,9 @@
             const hideComp = document.getElementById('hide_completed').checked;
             const viewMode = document.getElementById('view_mode').value;
 
-            // Update parameters while preserving others like hide_header
-            if (proj !== 'ALL') {
+            if (proj === 'NONE') {
+                params.set('project', 'none');
+            } else if (proj !== 'ALL') {
                 params.set('project', proj);
             } else {
                 params.delete('project');
@@ -441,13 +431,13 @@
             if (!hideComp) {
                 params.set('hide_completed', 'false');
             } else {
-                params.delete('hide_completed'); // clean up defaults
+                params.delete('hide_completed'); 
             }
             
             if (viewMode !== 'charts') {
                 params.set('view', viewMode);
             } else {
-                params.delete('view'); // clean up defaults
+                params.delete('view'); 
             }
 
             const queryString = params.toString();
@@ -466,6 +456,14 @@
             let hideCompleted = document.getElementById('hide_completed').checked;
             let viewMode = document.getElementById('view_mode').value;
             
+            const container = document.getElementById('dashboard_grid');
+            container.innerHTML = "";
+
+            if (selectedProject === 'NONE') {
+                container.innerHTML = `<h3 style="color:#ccc; text-align: center; margin-top: 50px;">Please select a project from the dropdown to view its progress.</h3>`;
+                return;
+            }
+            
             let projectsToShow = [];
             if (selectedProject === 'ALL') {
                 projectsToShow = Object.keys(globalProjectMap).sort();
@@ -479,9 +477,6 @@
                     return !(rgbStage.completed > 0 && rgbStage.notCompleted === 0); 
                 });
             }
-
-            const container = document.getElementById('dashboard_grid');
-            container.innerHTML = "";
 
             if (projectsToShow.length === 0) {
                 container.innerHTML = `<h3 style="color:#ccc; text-align: center; margin-top: 50px;">No projects match the current filters.</h3>`;
@@ -511,7 +506,6 @@
                 let headerBadgesHtml = `<div class="metrics-container">`;
                 let summaryRowsHtml = "";
 
-                // Aggregate Data Processing
                 Object.keys(categoryMap).forEach((col, idx) => {
                     let compVal = globalProjectMap[p].stages[col].completed;
                     let notCompVal = globalProjectMap[p].stages[col].notCompleted;
@@ -543,7 +537,6 @@
                 });
                 headerBadgesHtml += `</div>`;
 
-                // Build Card Container
                 let card = document.createElement('div');
                 card.className = 'project-card';
                 
@@ -558,7 +551,6 @@
                 header.innerHTML += headerBadgesHtml; 
                 card.appendChild(header);
 
-                // --- 1. Summary Table View ---
                 if (viewMode === 'summary_table' || viewMode === 'all') {
                     let tableDiv = document.createElement('div');
                     tableDiv.className = 'table-container';
@@ -580,7 +572,6 @@
                     card.appendChild(tableDiv);
                 }
 
-                // --- 2. Chart View ---
                 if (viewMode === 'charts' || viewMode === 'all') {
                     let chartDiv = document.createElement('div');
                     chartDiv.className = 'chart-body';
@@ -588,12 +579,10 @@
                     card.appendChild(chartDiv);
                 }
 
-                // --- 3. Detailed Flight Card View ---
                 if (viewMode === 'detailed_table' || viewMode === 'all') {
                     let detailDiv = document.createElement('div');
                     detailDiv.className = 'table-container';
                     
-                    // Sort lines alphanumerically
                     let sortedLines = globalProjectMap[p].lines.sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, {numeric: true}));
                     
                     let detailRows = "";
@@ -644,9 +633,8 @@
 
                 container.appendChild(card);
 
-                // Render Chart if enabled
                 if ((viewMode === 'charts' || viewMode === 'all') && categoriesAxis.length > 0) {
-                    let calcHeight = Math.max(120, categoriesAxis.length * 40); // slightly smaller bars in compact mode
+                    let calcHeight = Math.max(120, categoriesAxis.length * 40); 
                     var options = {
                         series: [
                             { name: 'Completed', data: completedData },
