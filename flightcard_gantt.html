@@ -268,10 +268,19 @@
                     // Extract a line identifier matching the "flightline" schema provided
                     let lineId = attrs.flightline || (attrs.ObjectId ? `Line ${attrs.ObjectId}` : (attrs.OBJECTID ? `Line ${attrs.OBJECTID}` : "Unknown"));
                     
+                    // Helper to determine if a tidal value is missing
+                    const isMissingVal = (val) => (val === null || val === undefined || String(val).trim() === '' || String(val) === 'nan');
+                    
+                    // A line is complete ONLY if all four tidal columns have data (or are marked 'N/R')
+                    let isLineComplete = !isMissingVal(attrs['NIR_MHW']) && 
+                                         !isMissingVal(attrs['NIR_MLLW']) && 
+                                         !isMissingVal(attrs['NIR_BMHW']) && 
+                                         !isMissingVal(attrs['NIR']);
+
                     // Store line data for detailed view
                     globalProjectMap[proj].lines.push({
                         id: lineId,
-                        RGB: attrs['RGB'],
+                        RGB: isLineComplete ? 'Complete' : 'Incomplete', // Replaces original RGB data with a clear completion status
                         MHW: attrs['NIR_MHW'],
                         MLLW: attrs['NIR_MLLW'],
                         BMHW: attrs['NIR_BMHW'],
@@ -280,16 +289,26 @@
 
                     // Aggregate counts for summary/charts
                     Object.keys(categoryMap).forEach(col => {
-                        let val = attrs[col];
-                        let isMissing = (val === null || val === undefined || String(val).trim() === '' || String(val) === 'nan');
-                        let isNR = (!isMissing && String(val).trim() === 'N/R');
-
-                        if (isNR) {
-                            // Ignore Not Required lines
-                        } else if (!isMissing) {
-                            globalProjectMap[proj].stages[col].completed += 1;
+                        if (col === 'RGB') {
+                            // Use the new tidal logic for the "Overall Project Complete" (RGB) category
+                            if (isLineComplete) {
+                                globalProjectMap[proj].stages[col].completed += 1;
+                            } else {
+                                globalProjectMap[proj].stages[col].notCompleted += 1;
+                            }
                         } else {
-                            globalProjectMap[proj].stages[col].notCompleted += 1;
+                            // Keep original logic for counting individual tidal columns
+                            let val = attrs[col];
+                            let isMissing = isMissingVal(val);
+                            let isNR = (!isMissing && String(val).trim() === 'N/R');
+
+                            if (isNR) {
+                                // Ignore Not Required lines
+                            } else if (!isMissing) {
+                                globalProjectMap[proj].stages[col].completed += 1;
+                            } else {
+                                globalProjectMap[proj].stages[col].notCompleted += 1;
+                            }
                         }
                     });
                 });
@@ -549,10 +568,18 @@
                             return v; 
                         };
                         
+                        // We highlight 'Incomplete' so it stands out immediately for the flight crew
+                        let rgbDisplay = l.RGB;
+                        if (l.RGB === 'Incomplete') {
+                            rgbDisplay = '<span class="text-orange">Incomplete</span>';
+                        } else if (l.RGB === 'Complete') {
+                            rgbDisplay = '<span class="text-green">Complete</span>';
+                        }
+                        
                         detailRows += `
                             <tr>
                                 <td style="font-weight:bold; color:#ccc;">${l.id}</td>
-                                <td>${fVal(l.RGB)}</td>
+                                <td>${rgbDisplay}</td>
                                 <td>${fVal(l.MHW)}</td>
                                 <td>${fVal(l.MLLW)}</td>
                                 <td>${fVal(l.BMHW)}</td>
