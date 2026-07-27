@@ -10,13 +10,22 @@
             background-color: #1a1a1a;
             color: #fff;
             margin: 0;
-            padding: 20px;
+            padding: 15px 20px; /* Reduced top padding */
         }
+        
+        /* Compact Header */
+        h2#main_header {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+
+        /* Compact UI Controls */
         #ui_controls {
             background-color: #333;
-            padding: 15px 20px;
+            padding: 8px 15px;
             border-radius: 5px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -24,32 +33,39 @@
             flex-wrap: wrap;
         }
         #ui_controls select {
-            padding: 8px 12px;
+            padding: 4px 8px;
             background-color: #222;
             color: #fff;
             border: 1px solid #666;
             border-radius: 4px;
-            font-size: 16px;
+            font-size: 14px;
             cursor: pointer;
+        }
+        #ui_controls label {
+            font-weight: bold; 
+            font-size: 14px;
         }
         .checkbox-container {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-left: 10px;
-            font-size: 16px;
+            gap: 6px;
+            margin-left: auto; /* Pushes the checkbox to the right if space allows */
+            font-size: 14px;
+            font-weight: normal !important;
             cursor: pointer;
         }
         .checkbox-container input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             cursor: pointer;
+            margin: 0;
         }
+        
         /* Project Frame Layouts */
         #dashboard_grid {
             display: flex;
             flex-direction: column;
-            gap: 30px;
+            gap: 20px; /* Reduced gap between projects */
         }
         .project-card {
             background-color: #222;
@@ -59,15 +75,15 @@
         }
         .project-header {
             background-color: #2d2d2d;
-            padding: 12px 20px;
-            font-size: 16px;
+            padding: 10px 15px; /* Compact header padding */
+            font-size: 15px;
             font-weight: bold;
             border-bottom: 1px solid #444;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
         }
         .project-header.complete {
             border-left: 5px solid #4caf50;
@@ -76,7 +92,7 @@
             border-left: 5px solid #ff7f0e;
         }
         .project-title {
-            font-size: 18px;
+            font-size: 16px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -87,16 +103,17 @@
         .project-header.incomplete .project-title {
             color: #ccc;
         }
+        
         /* Status Badges for the Headers */
         .metrics-container {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
         .status-badge {
-            padding: 4px 10px;
+            padding: 3px 8px;
             border-radius: 4px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             background-color: #111;
             border: 1px solid #444;
@@ -124,11 +141,11 @@
         .project-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 13px; /* Compact table text */
             color: #eee;
         }
         .project-table th, .project-table td {
-            padding: 10px 12px;
+            padding: 8px 10px; /* Compact table padding */
             text-align: left;
             border-bottom: 1px solid #333;
         }
@@ -136,7 +153,7 @@
             background-color: #2a2a2a;
             color: #aaa;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -150,10 +167,10 @@
         /* Detailed Grid Modifications */
         .detailed-table {
             margin: 0 auto;
-            width: 95%; /* Slightly constrained to make the center alignment visible */
+            width: 100%; /* Utilize full space on compact views */
         }
         .detailed-table th, .detailed-table td {
-            text-align: center; /* Centers all table text */
+            text-align: center;
             border: 1px solid #444;
         }
         .detailed-table th:first-child, .detailed-table td:first-child {
@@ -161,7 +178,7 @@
         }
         .detailed-table td {
             font-family: monospace;
-            font-size: 13px;
+            font-size: 12px;
         }
         
         .text-green { color: #4caf50; font-weight: bold; }
@@ -171,18 +188,18 @@
 </head>
 <body>
 
-    <h2>Flight Lines Completion Status Dashboard</h2>
+    <h2 id="main_header">Flight Lines Completion Status Dashboard</h2>
     
     <div id="ui_controls">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <label for="project_select" style="font-weight: bold; font-size: 16px;">Filter by Project:</label>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="project_select">Filter by Project:</label>
             <select id="project_select">
                 <option value="ALL">All Projects</option>
             </select>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <label for="view_mode" style="font-weight: bold; font-size: 16px;">View Mode:</label>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="view_mode">View Mode:</label>
             <select id="view_mode">
                 <option value="charts">Charts Only</option>
                 <option value="summary_table">Summary Table</option>
@@ -193,7 +210,7 @@
         
         <label class="checkbox-container">
             <input type="checkbox" id="hide_completed" checked>
-            Hide Completed Projects
+            Hide Completed
         </label>
     </div>
 
@@ -280,7 +297,7 @@
                     // Store line data for detailed view
                     globalProjectMap[proj].lines.push({
                         id: lineId,
-                        RGB: isLineComplete ? 'Complete' : 'Incomplete', // Replaces original RGB data with a clear completion status
+                        RGB: isLineComplete ? 'Complete' : 'Incomplete', 
                         MHW: attrs['NIR_MHW'],
                         MLLW: attrs['NIR_MLLW'],
                         BMHW: attrs['NIR_BMHW'],
@@ -290,14 +307,12 @@
                     // Aggregate counts for summary/charts
                     Object.keys(categoryMap).forEach(col => {
                         if (col === 'RGB') {
-                            // Use the new tidal logic for the "Overall Project Complete" (RGB) category
                             if (isLineComplete) {
                                 globalProjectMap[proj].stages[col].completed += 1;
                             } else {
                                 globalProjectMap[proj].stages[col].notCompleted += 1;
                             }
                         } else {
-                            // Keep original logic for counting individual tidal columns
                             let val = attrs[col];
                             let isMissing = isMissingVal(val);
                             let isNR = (!isMissing && String(val).trim() === 'N/R');
@@ -381,6 +396,12 @@
             const projParam = params.get('project');
             const hideParam = params.get('hide_completed');
             const viewParam = params.get('view');
+            const hideHeaderParam = params.get('hide_header'); // Check for new parameter
+
+            // Hide the header if requested via URL
+            if (hideHeaderParam === 'true' || hideHeaderParam === '1') {
+                document.getElementById('main_header').style.display = 'none';
+            }
 
             if (hideParam !== null) {
                 document.getElementById('hide_completed').checked = (hideParam === 'true' || hideParam === '1');
@@ -405,14 +426,29 @@
         }
 
         function updateUrlParams() {
-            const params = new URLSearchParams();
+            const params = new URLSearchParams(window.location.search);
             const proj = document.getElementById('project_select').value;
             const hideComp = document.getElementById('hide_completed').checked;
             const viewMode = document.getElementById('view_mode').value;
 
-            if (proj !== 'ALL') params.set('project', proj);
-            if (!hideComp) params.set('hide_completed', 'false');
-            if (viewMode !== 'charts') params.set('view', viewMode);
+            // Update parameters while preserving others like hide_header
+            if (proj !== 'ALL') {
+                params.set('project', proj);
+            } else {
+                params.delete('project');
+            }
+            
+            if (!hideComp) {
+                params.set('hide_completed', 'false');
+            } else {
+                params.delete('hide_completed'); // clean up defaults
+            }
+            
+            if (viewMode !== 'charts') {
+                params.set('view', viewMode);
+            } else {
+                params.delete('view'); // clean up defaults
+            }
 
             const queryString = params.toString();
             const newUrl = window.location.pathname + (queryString ? '?' + queryString : '');
@@ -527,7 +563,7 @@
                     let tableDiv = document.createElement('div');
                     tableDiv.className = 'table-container';
                     tableDiv.innerHTML = `
-                        <h4 style="margin: 5px 0 10px; color:#ccc;">Summary Overview</h4>
+                        <h4 style="margin: 0 0 10px; color:#ccc;">Summary Overview</h4>
                         <table class="project-table">
                             <thead>
                                 <tr>
@@ -568,7 +604,6 @@
                             return v; 
                         };
                         
-                        // We highlight 'Incomplete' so it stands out immediately for the flight crew
                         let rgbDisplay = l.RGB;
                         if (l.RGB === 'Incomplete') {
                             rgbDisplay = '<span class="text-orange">Incomplete</span>';
@@ -589,7 +624,7 @@
                     });
 
                     detailDiv.innerHTML = `
-                        <h4 style="margin: 10px 0 10px; color:#ccc; text-align: center;">Photographer's Flight Card</h4>
+                        <h4 style="margin: 0 0 10px; color:#ccc; text-align: center;">Photographer's Flight Card</h4>
                         <table class="project-table detailed-table">
                             <thead>
                                 <tr>
@@ -611,7 +646,7 @@
 
                 // Render Chart if enabled
                 if ((viewMode === 'charts' || viewMode === 'all') && categoriesAxis.length > 0) {
-                    let calcHeight = Math.max(120, categoriesAxis.length * 50);
+                    let calcHeight = Math.max(120, categoriesAxis.length * 40); // slightly smaller bars in compact mode
                     var options = {
                         series: [
                             { name: 'Completed', data: completedData },
@@ -630,7 +665,7 @@
                         plotOptions: {
                             bar: {
                                 horizontal: true,
-                                barHeight: '70%',
+                                barHeight: '65%',
                                 dataLabels: { position: 'center' }
                             }
                         },
