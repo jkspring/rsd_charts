@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOAA Tide Tolerance Dashboard</title>
+    
+    <!-- Core Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Luxon Adapter for Time Scales -->
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
+    <!-- Chart.js Annotation Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.2/dist/chartjs-plugin-annotation.min.js"></script>
+    
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #fff; color: #333; }
+        
+        .chart-container { height: 500px; width: 100%; margin-bottom: 20px; }
+        
+        /* Control Panel Styles */
+        .controls-panel { background: #f9f9f9; border: 1px solid #e0e0e0; padding: 15px; display: flex; gap: 40px; font-size: 13px; border-radius: 4px; }
+        .control-col { display: flex; flex-direction: column; gap: 10px; }
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        .control-row { display: flex; gap: 5px; align-items: center; }
+        
+        select, input[type="date"], button { padding: 4px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 3px; background: white; }
+        select { width: 180px; }
+        
+        .btn-primary { background: #0056b3; color: white; border: none; font-weight: bold; cursor: pointer; padding: 6px 12px; }
+        .btn-primary:hover { background: #004494; }
+        .btn-secondary { background: #f0f0f0; border: 1px solid #ccc; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="chart-container">
+    <canvas id="tideChart"></canvas>
+</div>
+
+<div class="controls-panel">
+    <div class="control-col">
+        <div class="control-group">
+            <label>Options for</label>
+            <select id="station-select">
+                <option value="8773259">Loading stations...</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>From:</label>
+            <input type="date" id="start-date">
+        </div>
+        <div class="control-group">
+            <label>To:</label>
+            <input type="date" id="end-date">
+        </div>
+    </div>
+
+    <div class="control-col">
+        <div class="control-group">
+            <label>Units</label>
+            <select id="units-select" disabled><option value="english">Standard (ft)</option></select>
+        </div>
+        <div class="control-group">
+            <label>Timezone</label>
+            <select id="tz-select">
+                <option value="lst_ldt">LST/LDT</option>
+                <option value="gmt">GMT</option>
+                <option value="lst">LST</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Datum</label>
+            <select id="datum-select">
+                <option value="MHW">MHW</option>
+                <option value="MLLW">MLLW</option>
+                <option value="MSL">MSL</option>
+                <option value="STND">Station Datum</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="control-col">
+        <div class="control-group">
+            <label>Shift dates</label>
+            <div class="control-row">
+                <button class="btn-secondary" onclick="shiftDates(-1)">⏮ Back 1 Day</button>
+                <button class="btn-secondary" onclick="shiftDates(1)">Forward 1 Day ⏭</button>
+            </div>
+        </div>
+        <br>
+        <div class="control-group">
+            <label>Update</label>
+            <div class="control-row">
+                <button class="btn-primary" onclick="loadDashboard()">↻ Plot</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const BASE_URL = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter";
+    const META_URL = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations";
+    let chartInstance = null;
+
+    // CUSTOM PLUGIN: Draws a vertical dashed line when hovering over the chart
+    const crosshairPlugin = {
+        id: 'crosshair',
+        afterDraw: chart => {
+            if (chart.tooltip._active && chart.tooltip._active.length) {
+                const activePoint = chart.tooltip._active[0];
+                const ctx = chart.ctx;
+                const x = activePoint.element.x;
+                const topY = chart.scales.y.top;
+                const bottomY = chart.scales.y.bottom;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(x, topY);
+                ctx.lineTo(x, bottomY);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.setLineDash([5, 5]); // Dashed line effect
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+    };
+
+    async function init() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('start-date').value = urlParams.get('start') || todayStr;
+        document.getElementById('end-date').value = urlParams.get('end') || todayStr;
+
+        if (urlParams.has('tz')) document.getElementById('tz-select').value = urlParams.get('tz');
+        if (urlParams.has('datum')) document.getElementById('datum-select').value = urlParams.get('datum');
+
+        try {
+            const res = await fetch(`${META_URL}.json`);
+            const data = await res.json();
+            
+            const select = document.getElementById('station-select');
+            select.innerHTML = ''; 
+            
+            const sortedStations = data.stations.sort((a, b) => a.name.localeCompare(b.name));
+            sortedStations.forEach(st => {
+                const opt = document.createElement('option');
+                opt.value = st.id;
+                opt.text = `${st.id} ${st.name}, ${st.state}`;
+                select.appendChild(opt);
+            });
+            
+            select.value = urlParams.get('station') || "8773259";
+            
+            loadDashboard();
+        } catch (err) {
+            console.error("Failed to load stations", err);
+        }
+    }
+
+    function shiftDates(days) {
+        const startInput = document.getElementById('start-date');
+        const endInput = document.getElementById('end-date');
+        
+        let start = new Date(startInput.value);
+        let end = new Date(endInput.value);
+        
+        start.setDate(start.getDate() + days);
+        end.setDate(end.getDate() + days);
+        
+        startInput.valueAsDate = start;
+        endInput.valueAsDate = end;
+        loadDashboard();
+    }
+
+    function formatApiDate(dateStr) {
+        return dateStr.replace(/-/g, '');
+    }
+
+    async function loadDashboard() {
+        const stationId = document.getElementById("station-select").value;
+        const startDateStr = document.getElementById("start-date").value;
+        const endDateStr = document.getElementById("end-date").value;
+        
+        const tzSelect = document.getElementById("tz-select");
+        const tz = tzSelect.value;
+        const tzText = tzSelect.options[tzSelect.selectedIndex].text;
+        
+        const datum = document.getElementById("datum-select").value;
+
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.set('station', stationId);
+        newUrl.searchParams.set('start', startDateStr);
+        newUrl.searchParams.set('end', endDateStr);
+        newUrl.searchParams.set('tz', tz);
+        newUrl.searchParams.set('datum', datum);
+        window.history.pushState({}, '', newUrl);
+
+        const apiStartDate = formatApiDate(startDateStr);
+        const apiEndDate = formatApiDate(endDateStr);
+
+        try {
+            const [metaRes, datumRes, predRes, verRes] = await Promise.all([
+                fetch(`${META_URL}/${stationId}.json`).then(r => r.json()),
+                fetch(`${META_URL}/${stationId}/datums.json?units=english`).then(r => r.json()),
+                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=predictions&datum=${datum}&units=english&time_zone=${tz}&format=json`).then(r => r.json()),
+                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=water_level&datum=${datum}&units=english&time_zone=${tz}&format=json`).then(r => r.json())
+            ]);
+
+            const stationMeta = metaRes.stations[0];
+            const longitude = stationMeta.lng;
+            const fullStationTitle = `${stationMeta.id}, ${stationMeta.name} ${stationMeta.state}`;
+            
+            let mhw = null, mllw = null, mn = null;
+            if (datumRes.datums) {
+                datumRes.datums.forEach(d => {
+                    const val = parseFloat(d.value);
+                    if (d.name === "MHW") mhw = val;
+                    if (d.name === "MLLW") mllw = val;
+                    if (d.name === "MN") mn = val;
+                });
+            }
+
+            let computed_range = 0, range_type = "", tolerance = 0, errorMsg = "";
+
+            if (mhw === null || mllw === null || mn === null) {
+                errorMsg = "Required datums missing (MHW, MLLW, or MN). Cannot compute tolerance.";
+            } else {
+                if (longitude <= -114 || longitude > 0) {
+                    computed_range = mhw - mllw;
+                    range_type = "Computed Range (MHW-MLLW)";
+                } else {
+                    computed_range = mn;
+                    range_type = "Mean Range (MN)";
+                }
+
+                if (computed_range <= 5) {
+                    tolerance = 0.5;
+                } else {
+                    tolerance = computed_range * 0.10;
+                }
+            }
+
+            const predData = predRes.predictions ? predRes.predictions.map(d => ({ x: new Date(d.t), y: parseFloat(d.v) })) : [];
+            const verData = [];
+            const prelimData = [];
+
+            if (verRes.data) {
+                verRes.data.forEach(d => {
+                    const pt = { x: new Date(d.t), y: parseFloat(d.v) };
+                    if (d.q === 'v') {
+                        verData.push(pt);
+                    } else {
+                        prelimData.push(pt);
+                    }
+                });
+            }
+
+            const startDisplay = startDateStr.replace(/-/g, '/');
+            const endDisplay = endDateStr.replace(/-/g, '/');
+            
+            const chartTitleLines = [
+                "NOAA/NOS/CO-OPS",
+                `Observed Water Levels at ${fullStationTitle}`,
+                `From ${startDisplay} 00:00 ${tzText} to ${endDisplay} 23:59 ${tzText}`
+            ];
+
+            // Setup the highlighted Subtitle for RSD Computed Tolerance
+            let chartSubtitleText = "";
+            if (errorMsg) {
+                chartSubtitleText = `Tolerance Status: ${errorMsg}`;
+            } else {
+                chartSubtitleText = `${range_type}: ${computed_range.toFixed(2)} ft  |  RSD Computed Tolerance: ±${tolerance.toFixed(2)} ft`;
+            }
+
+            renderChart(chartTitleLines, chartSubtitleText, predData, verData, prelimData, datum, tolerance, errorMsg === "");
+
+        } catch (error) {
+            console.error("Dashboard failed to load:", error);
+            const errorTitle = ["NOAA/NOS/CO-OPS", "Error loading data. Make sure dates are valid and station reports water levels."];
+            renderChart(errorTitle, "", [], [], [], datum, 0, false);
+        }
+    }
+
+    function renderChart(titleLines, subtitleText, predData, verData, prelimData, currentDatum, tolerance, hasTolerance) {
+        const ctx = document.getElementById('tideChart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+
+        let annotationConfig = {};
+        if (hasTolerance) {
+            annotationConfig = {
+                annotations: {
+                    toleranceBand: {
+                        type: 'box',
+                        yMin: -tolerance,
+                        yMax: tolerance,
+                        backgroundColor: 'rgba(76, 175, 80, 0.2)', 
+                        borderWidth: 0,
+                        label: {
+                            display: true,
+                            content: `±${tolerance.toFixed(2)} ft RSD Tolerance`,
+                            position: 'start',
+                            color: 'black',
+                            backgroundColor: 'rgba(255,255,255,0.7)'
+                        }
+                    }
+                }
+            };
+        }
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: 'Predictions',
+                        data: predData,
+                        borderColor: '#0073e6', 
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Verified',
+                        data: verData,
+                        borderColor: '#00cc00', 
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Preliminary',
+                        data: prelimData,
+                        borderColor: '#ff0000', 
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        tension: 0.4
+                    }
+                ]
+            },
+            // Load the custom crosshair plugin here
+            plugins: [crosshairPlugin], 
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: titleLines,
+                        font: { size: 14, weight: 'bold' },
+                        color: '#000',
+                        padding: { bottom: 5 }
+                    },
+                    // Subtitle used specifically to highlight the tolerance text
+                    subtitle: {
+                        display: !!subtitleText,
+                        text: subtitleText,
+                        font: { size: 13, weight: 'bold' },
+                        color: '#d9534f', // Red highlight color
+                        padding: { bottom: 20 }
+                    },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'line',
+                            boxWidth: 24,
+                            padding: 20,
+                            color: '#333',
+                            font: { weight: 'bold', size: 11 } // Made legend text slightly smaller too
+                        }
+                    },
+                    annotation: annotationConfig,
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ' Water Level: ';
+                                if (context.parsed.y !== null) label += context.parsed.y.toFixed(2) + ' ft';
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'hour' },
+                        title: { 
+                            display: false 
+                        },
+                        ticks: { 
+                            maxRotation: 0,
+                            font: { size: 10 }, // Smaller X-axis labels
+                            callback: function(value) {
+                                const d = new Date(value);
+                                const hrs = String(d.getHours()).padStart(2, '0');
+                                const mins = String(d.getMinutes()).padStart(2, '0');
+                                const timeStr = `${hrs}:${mins}`;
+                                const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+                                return [timeStr, dateStr]; 
+                            }
+                        },
+                        grid: { color: '#e0e0e0' }
+                    },
+                    y: {
+                        title: { 
+                            display: true, 
+                            text: `Height in Feet (${currentDatum})`,
+                            font: { size: 11 } // Smaller Y-axis title
+                        },
+                        ticks: { 
+                            font: { size: 10 } // Smaller Y-axis numbers
+                        },
+                        grid: { color: '#e0e0e0' }
+                    }
+                }
+            }
+        });
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
