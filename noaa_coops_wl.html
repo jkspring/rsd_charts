@@ -12,21 +12,19 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1"></script>
     <!-- Chart.js Annotation Plugin -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.2/dist/chartjs-plugin-annotation.min.js"></script>
+    <!-- SunCalc Library for Solar Angle Calculations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
     
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #fff; color: #333; }
-        
         .chart-container { height: 500px; width: 100%; margin-bottom: 20px; }
-        
-        /* Control Panel Styles */
         .controls-panel { background: #f9f9f9; border: 1px solid #e0e0e0; padding: 15px; display: flex; gap: 40px; font-size: 13px; border-radius: 4px; }
         .control-col { display: flex; flex-direction: column; gap: 10px; }
         .control-group { display: flex; flex-direction: column; gap: 4px; }
         .control-row { display: flex; gap: 5px; align-items: center; }
-        
-        select, input[type="date"], button { padding: 4px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 3px; background: white; }
+        select, input[type="date"], input[type="number"], button { padding: 4px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 3px; background: white; }
         select { width: 180px; }
-        
+        input[type="number"] { width: 60px; }
         .btn-primary { background: #0056b3; color: white; border: none; font-weight: bold; cursor: pointer; padding: 6px 12px; }
         .btn-primary:hover { background: #004494; }
         .btn-secondary { background: #f0f0f0; border: 1px solid #ccc; cursor: pointer; }
@@ -42,7 +40,7 @@
     <div class="control-col">
         <div class="control-group">
             <label>Options for</label>
-            <select id="station-select">
+            <select id="station-select" onchange="loadDashboard()">
                 <option value="8773259">Loading stations...</option>
             </select>
         </div>
@@ -82,13 +80,16 @@
 
     <div class="control-col">
         <div class="control-group">
+            <label>Min Sun Angle (&deg;)</label>
+            <input type="number" id="sun-angle" value="25" step="1">
+        </div>
+        <div class="control-group">
             <label>Shift dates</label>
             <div class="control-row">
                 <button class="btn-secondary" onclick="shiftDates(-1)">⏮ Back 1 Day</button>
                 <button class="btn-secondary" onclick="shiftDates(1)">Forward 1 Day ⏭</button>
             </div>
         </div>
-        <br>
         <div class="control-group">
             <label>Update</label>
             <div class="control-row">
@@ -103,7 +104,6 @@
     const META_URL = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations";
     let chartInstance = null;
 
-    // CUSTOM PLUGIN: Draws a vertical dashed line when hovering over the chart
     const crosshairPlugin = {
         id: 'crosshair',
         afterDraw: chart => {
@@ -120,7 +120,7 @@
                 ctx.lineTo(x, bottomY);
                 ctx.lineWidth = 1;
                 ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-                ctx.setLineDash([5, 5]); // Dashed line effect
+                ctx.setLineDash([5, 5]); 
                 ctx.stroke();
                 ctx.restore();
             }
@@ -136,6 +136,7 @@
 
         if (urlParams.has('tz')) document.getElementById('tz-select').value = urlParams.get('tz');
         if (urlParams.has('datum')) document.getElementById('datum-select').value = urlParams.get('datum');
+        if (urlParams.has('sun')) document.getElementById('sun-angle').value = urlParams.get('sun');
 
         try {
             const res = await fetch(`${META_URL}.json`);
@@ -187,8 +188,8 @@
         const tzSelect = document.getElementById("tz-select");
         const tz = tzSelect.value;
         const tzText = tzSelect.options[tzSelect.selectedIndex].text;
-        
         const datum = document.getElementById("datum-select").value;
+        const sunThreshold = parseFloat(document.getElementById("sun-angle").value);
 
         const newUrl = new URL(window.location);
         newUrl.searchParams.set('station', stationId);
@@ -196,10 +197,16 @@
         newUrl.searchParams.set('end', endDateStr);
         newUrl.searchParams.set('tz', tz);
         newUrl.searchParams.set('datum', datum);
+        newUrl.searchParams.set('sun', sunThreshold);
         window.history.pushState({}, '', newUrl);
 
         const apiStartDate = formatApiDate(startDateStr);
         const apiEndDate = formatApiDate(endDateStr);
+
+        const now = new Date();
+        const startDT = new Date(startDateStr.replace(/-/g, '/') + " 00:00:00");
+        const endDT = new Date(endDateStr.replace(/-/g, '/') + " 23:59:59");
+        const showCurrentTime = (now >= startDT && now <= endDT);
 
         try {
             const [metaRes, datumRes, predRes, verRes] = await Promise.all([
@@ -211,8 +218,36 @@
 
             const stationMeta = metaRes.stations[0];
             const longitude = stationMeta.lng;
+            const latitude = stationMeta.lat;
             const fullStationTitle = `${stationMeta.id}, ${stationMeta.name} ${stationMeta.state}`;
             
+            const darkBoxes = [];
+            let inDarkZone = false;
+            let darkStart = null;
+            let current = new Date(startDT.getTime());
+            const stepMs = 15 * 60 * 1000; 
+            
+            while (current <= endDT) {
+                const pos = SunCalc.getPosition(current, latitude, longitude);
+                const angleDeg = pos.altitude * (180 / Math.PI);
+                
+                if (angleDeg < sunThreshold) {
+                    if (!inDarkZone) {
+                        inDarkZone = true;
+                        darkStart = new Date(current.getTime());
+                    }
+                } else {
+                    if (inDarkZone) {
+                        inDarkZone = false;
+                        darkBoxes.push({ start: darkStart, end: new Date(current.getTime()) });
+                    }
+                }
+                current = new Date(current.getTime() + stepMs);
+            }
+            if (inDarkZone) {
+                darkBoxes.push({ start: darkStart, end: new Date(endDT.getTime()) });
+            }
+
             let mhw = null, mllw = null, mn = null;
             if (datumRes.datums) {
                 datumRes.datums.forEach(d => {
@@ -267,7 +302,6 @@
                 `From ${startDisplay} 00:00 ${tzText} to ${endDisplay} 23:59 ${tzText}`
             ];
 
-            // Setup the highlighted Subtitle for RSD Computed Tolerance
             let chartSubtitleText = "";
             if (errorMsg) {
                 chartSubtitleText = `Tolerance Status: ${errorMsg}`;
@@ -275,37 +309,63 @@
                 chartSubtitleText = `${range_type}: ${computed_range.toFixed(2)} ft  |  RSD Computed Tolerance: ±${tolerance.toFixed(2)} ft`;
             }
 
-            renderChart(chartTitleLines, chartSubtitleText, predData, verData, prelimData, datum, tolerance, errorMsg === "");
+            renderChart(chartTitleLines, chartSubtitleText, predData, verData, prelimData, datum, tolerance, errorMsg === "", showCurrentTime, darkBoxes);
 
         } catch (error) {
             console.error("Dashboard failed to load:", error);
-            const errorTitle = ["NOAA/NOS/CO-OPS", "Error loading data. Make sure dates are valid and station reports water levels."];
-            renderChart(errorTitle, "", [], [], [], datum, 0, false);
+            const errorTitle = ["NOAA/NOS/CO-OPS", "Error loading data."];
+            renderChart(errorTitle, "", [], [], [], datum, 0, false, false, []);
         }
     }
 
-    function renderChart(titleLines, subtitleText, predData, verData, prelimData, currentDatum, tolerance, hasTolerance) {
+    function renderChart(titleLines, subtitleText, predData, verData, prelimData, currentDatum, tolerance, hasTolerance, showCurrentTime, darkBoxes) {
         const ctx = document.getElementById('tideChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
-        let annotationConfig = {};
+        let annotationConfig = { annotations: {} };
+
+        darkBoxes.forEach((box, index) => {
+            annotationConfig.annotations[`darkBox${index}`] = {
+                type: 'box',
+                xMin: box.start,
+                xMax: box.end,
+                backgroundColor: 'rgba(180, 180, 180, 0.25)', 
+                borderWidth: 0,
+                drawTime: 'beforeDatasetsDraw' 
+            };
+        });
+
         if (hasTolerance) {
-            annotationConfig = {
-                annotations: {
-                    toleranceBand: {
-                        type: 'box',
-                        yMin: -tolerance,
-                        yMax: tolerance,
-                        backgroundColor: 'rgba(76, 175, 80, 0.2)', 
-                        borderWidth: 0,
-                        label: {
-                            display: true,
-                            content: `±${tolerance.toFixed(2)} ft RSD Tolerance`,
-                            position: 'start',
-                            color: 'black',
-                            backgroundColor: 'rgba(255,255,255,0.7)'
-                        }
-                    }
+            annotationConfig.annotations.toleranceBand = {
+                type: 'box',
+                yMin: -tolerance,
+                yMax: tolerance,
+                backgroundColor: 'rgba(76, 175, 80, 0.2)', 
+                borderWidth: 0,
+                label: {
+                    display: true,
+                    content: `±${tolerance.toFixed(2)} ft RSD Tolerance`,
+                    position: 'start',
+                    color: 'black',
+                    backgroundColor: 'rgba(255,255,255,0.7)'
+                }
+            };
+        }
+
+        if (showCurrentTime) {
+            annotationConfig.annotations.currentTimeLine = {
+                type: 'line',
+                scaleID: 'x',
+                value: new Date(), 
+                borderColor: '#000000', 
+                borderWidth: 2,
+                label: {
+                    display: true,
+                    content: 'Current Time',
+                    position: 'start', 
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    color: '#fff',
+                    font: { size: 11, weight: 'bold' }
                 }
             };
         }
@@ -343,7 +403,6 @@
                     }
                 ]
             },
-            // Load the custom crosshair plugin here
             plugins: [crosshairPlugin], 
             options: {
                 responsive: true,
@@ -360,12 +419,11 @@
                         color: '#000',
                         padding: { bottom: 5 }
                     },
-                    // Subtitle used specifically to highlight the tolerance text
                     subtitle: {
                         display: !!subtitleText,
                         text: subtitleText,
                         font: { size: 13, weight: 'bold' },
-                        color: '#d9534f', // Red highlight color
+                        color: '#d9534f', 
                         padding: { bottom: 20 }
                     },
                     legend: {
@@ -376,7 +434,7 @@
                             boxWidth: 24,
                             padding: 20,
                             color: '#333',
-                            font: { weight: 'bold', size: 11 } // Made legend text slightly smaller too
+                            font: { weight: 'bold', size: 11 } 
                         }
                     },
                     annotation: annotationConfig,
@@ -395,12 +453,10 @@
                     x: {
                         type: 'time',
                         time: { unit: 'hour' },
-                        title: { 
-                            display: false 
-                        },
+                        title: { display: false },
                         ticks: { 
                             maxRotation: 0,
-                            font: { size: 10 }, // Smaller X-axis labels
+                            font: { size: 10 }, 
                             callback: function(value) {
                                 const d = new Date(value);
                                 const hrs = String(d.getHours()).padStart(2, '0');
@@ -416,12 +472,20 @@
                         title: { 
                             display: true, 
                             text: `Height in Feet (${currentDatum})`,
-                            font: { size: 11 } // Smaller Y-axis title
+                            font: { size: 11 } 
                         },
-                        ticks: { 
-                            font: { size: 10 } // Smaller Y-axis numbers
-                        },
-                        grid: { color: '#e0e0e0' }
+                        ticks: { font: { size: 10 } },
+                        grid: { 
+                            // --- HIGHLIGHT THE ZERO LINE ---
+                            color: (context) => {
+                                if (context.tick.value === 0) return '#000000'; // Solid black for 0
+                                return '#e0e0e0'; // Light grey for everything else
+                            },
+                            lineWidth: (context) => {
+                                if (context.tick.value === 0) return 2; // Make the 0 line twice as thick
+                                return 1;
+                            }
+                        }
                     }
                 }
             }
