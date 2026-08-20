@@ -15,85 +15,226 @@
     <!-- SunCalc Library for Solar Angle Calculations -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.9.0/suncalc.min.js"></script>
     
+    <!-- Tom Select CSS and JS for Searchable Dropdown -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.default.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #fff; color: #333; }
-        .chart-container { height: 500px; width: 100%; margin-bottom: 20px; }
-        .controls-panel { background: #f9f9f9; border: 1px solid #e0e0e0; padding: 15px; display: flex; gap: 40px; font-size: 13px; border-radius: 4px; }
-        .control-col { display: flex; flex-direction: column; gap: 10px; }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            padding: 15px; 
+            background: #f4f6f8; 
+            color: #333; 
+        }
+
+        /* Dashboard Wrapper Container */
+        #dashboard-wrapper {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        /* Dynamic Height Chart Main Layout */
+        .dashboard-main { 
+            display: flex; 
+            gap: 12px; 
+            height: 60vh; 
+            min-height: 380px; 
+            max-height: 650px; 
+            width: 100%; 
+        }
+        
+        .chart-container { 
+            flex: 1; 
+            height: 100%; 
+            position: relative; 
+            min-width: 0; 
+        }
+        
+        /* Dynamic Right Sidebar Legend */
+        .datums-sidebar { 
+            width: 125px; 
+            border: 1px solid #e1e4e8; 
+            position: relative; 
+            background: #fafbfc;
+            border-radius: 6px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .datums-sidebar-header {
+            text-align: center;
+            padding: 8px 4px;
+            background: #f1f3f5;
+            border-bottom: 1px solid #e1e4e8;
+        }
+        .datums-sidebar h4 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #444; }
+        .datums-sidebar span.sub { font-size: 10px; color: #666; font-weight: bold; }
+        
+        .datums-list-container {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            pointer-events: none;
+        }
+        
+        /* Absolute Positioned Sidebar Items mapped to Y Pixel */
+        .datum-item { 
+            position: absolute;
+            left: 6px;
+            right: 6px;
+            display: flex; 
+            align-items: center; 
+            cursor: pointer; 
+            user-select: none;
+            padding: 3px 5px;
+            border-radius: 4px;
+            transform: translateY(-50%);
+            pointer-events: auto;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #d0d7de;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: top 0.15s ease-out, opacity 0.2s ease, background-color 0.2s ease;
+        }
+        .datum-item:hover { background: #eef2f5; border-color: #0056b3; }
+        .datum-item.disabled { opacity: 0.35; border-color: #e1e4e8; background: #fff; }
+        .datum-color-box { width: 14px; height: 3px; margin-right: 5px; display: inline-block; border-radius: 1px; }
+        .datum-name { font-weight: bold; flex: 1; }
+
+        /* Responsive Control Panel */
+        .controls-panel { 
+            background: #fafbfc; 
+            border: 1px solid #e1e4e8; 
+            padding: 12px 15px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: space-between;
+            gap: 15px; 
+            font-size: 12px; 
+            border-radius: 6px; 
+        }
+        .control-col { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 180px; }
         .control-group { display: flex; flex-direction: column; gap: 4px; }
-        .control-row { display: flex; gap: 5px; align-items: center; }
-        select, input[type="date"], input[type="number"], button { padding: 4px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 3px; background: white; }
-        select { width: 180px; }
+        .control-row { display: flex; gap: 6px; align-items: center; }
+        
+        select, input[type="date"], input[type="number"], button { 
+            padding: 5px 8px; 
+            font-size: 12px; 
+            border: 1px solid #d0d7de; 
+            border-radius: 4px; 
+            background: white; 
+            outline: none;
+        }
+        select:focus, input:focus { border-color: #0969da; box-shadow: 0 0 0 2px rgba(9,105,218,0.15); }
+        .ts-wrapper { width: 100% !important; font-size: 12px; }
         input[type="number"] { width: 60px; }
-        .btn-primary { background: #0056b3; color: white; border: none; font-weight: bold; cursor: pointer; padding: 6px 12px; }
-        .btn-primary:hover { background: #004494; }
-        .btn-secondary { background: #f0f0f0; border: 1px solid #ccc; cursor: pointer; }
+        
+        .btn-primary { background: #0969da; color: white; border: none; font-weight: bold; cursor: pointer; padding: 6px 14px; border-radius: 4px; }
+        .btn-primary:hover { background: #0256b3; }
+        .btn-secondary { background: #f6f8fa; border: 1px solid #d0d7de; cursor: pointer; flex: 1; font-weight: 500; }
+        .btn-secondary:hover { background: #f3f4f6; }
     </style>
 </head>
 <body>
 
-<div class="chart-container">
-    <canvas id="tideChart"></canvas>
-</div>
-
-<div class="controls-panel">
-    <div class="control-col">
-        <div class="control-group">
-            <label>Options for</label>
-            <select id="station-select" onchange="loadDashboard()">
-                <option value="8773259">Loading stations...</option>
-            </select>
+<div id="dashboard-wrapper">
+    <div class="dashboard-main">
+        <div class="chart-container">
+            <canvas id="tideChart"></canvas>
         </div>
-        <div class="control-group">
-            <label>From:</label>
-            <input type="date" id="start-date">
-        </div>
-        <div class="control-group">
-            <label>To:</label>
-            <input type="date" id="end-date">
-        </div>
-    </div>
-
-    <div class="control-col">
-        <div class="control-group">
-            <label>Units</label>
-            <select id="units-select" disabled><option value="english">Standard (ft)</option></select>
-        </div>
-        <div class="control-group">
-            <label>Timezone</label>
-            <select id="tz-select">
-                <option value="lst_ldt">LST/LDT</option>
-                <option value="gmt">GMT</option>
-                <option value="lst">LST</option>
-            </select>
-        </div>
-        <div class="control-group">
-            <label>Datum</label>
-            <select id="datum-select">
-                <option value="MHW">MHW</option>
-                <option value="MLLW">MLLW</option>
-                <option value="MSL">MSL</option>
-                <option value="STND">Station Datum</option>
-            </select>
-        </div>
-    </div>
-
-    <div class="control-col">
-        <div class="control-group">
-            <label>Min Sun Angle (&deg;)</label>
-            <input type="number" id="sun-angle" value="25" step="1">
-        </div>
-        <div class="control-group">
-            <label>Shift dates</label>
-            <div class="control-row">
-                <button class="btn-secondary" onclick="shiftDates(-1)">⏮ Back 1 Day</button>
-                <button class="btn-secondary" onclick="shiftDates(1)">Forward 1 Day ⏭</button>
+        
+        <div class="datums-sidebar" id="datums-sidebar">
+            <div class="datums-sidebar-header">
+                <h4>Datums</h4>
+                <span class="sub" id="datum-baseline-label">(MHW)</span>
+            </div>
+            <div class="datums-list-container" id="datums-list">
+                <!-- Dynamically positioned datum legend items -->
             </div>
         </div>
-        <div class="control-group">
-            <label>Update</label>
+    </div>
+
+    <div class="controls-panel">
+        <div class="control-col">
+            <div class="control-group">
+                <label><b>Station Location</b></label>
+                <select id="station-select">
+                    <option value="8773259">Loading stations...</option>
+                </select>
+            </div>
             <div class="control-row">
-                <button class="btn-primary" onclick="loadDashboard()">↻ Plot</button>
+                <div class="control-group" style="flex: 1;">
+                    <label>From:</label>
+                    <input type="date" id="start-date">
+                </div>
+                <div class="control-group" style="flex: 1;">
+                    <label>To:</label>
+                    <input type="date" id="end-date">
+                </div>
+            </div>
+        </div>
+
+        <div class="control-col">
+            <div class="control-row">
+                <div class="control-group" style="flex: 1;">
+                    <label>Units</label>
+                    <select id="units-select">
+                        <option value="english">Standard (ft)</option>
+                        <option value="metric">Metric (m)</option>
+                    </select>
+                </div>
+                <div class="control-group" style="flex: 1;">
+                    <label>Timezone</label>
+                    <select id="tz-select">
+                        <option value="lst_ldt">LST/LDT</option>
+                        <option value="gmt">GMT</option>
+                        <option value="lst">LST</option>
+                    </select>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>Datum</label>
+                <select id="datum-select" style="width: 100%;">
+                    <option value="MHW">MHW</option>
+                    <option value="MLLW">MLLW</option>
+                    <option value="MSL">MSL</option>
+                    <option value="STND">Station Datum</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="control-col">
+            <div class="control-group">
+                <label class="control-row">
+                    <input type="checkbox" id="sun-toggle" checked>
+                    <span>Min Sun Angle (&deg;)</span>
+                </label>
+                <input type="number" id="sun-angle" value="25" step="1">
+            </div>
+            <div class="control-group">
+                <label>Shift Dates</label>
+                <div class="control-row">
+                    <button class="btn-secondary" onclick="shiftDates(-1)">⏮ Back 1D</button>
+                    <button class="btn-secondary" onclick="shiftDates(1)">Forward 1D ⏭</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="control-col" style="flex: 0 0 100px; justify-content: flex-end;">
+            <div class="control-group">
+                <button class="btn-primary" style="height: 36px;" onclick="loadDashboard()">↻ Plot</button>
             </div>
         </div>
     </div>
@@ -103,6 +244,20 @@
     const BASE_URL = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter";
     const META_URL = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations";
     let chartInstance = null;
+    let stationSelectInstance = null;
+    let activeDatumObjects = [];
+
+    const DATUM_COLORS = {
+        'MHHW': '#2b5c8f',
+        'MHW': '#000000',
+        'DTL': '#8a2be2',
+        'MTL': '#4cd964',
+        'MSL': '#ff9500',
+        'MLW': '#5ac8fa',
+        'MLLW': '#ff3b30',
+        'GT': '#8e8e93',
+        'MN': '#8e8e93'
+    };
 
     const crosshairPlugin = {
         id: 'crosshair',
@@ -127,6 +282,28 @@
         }
     };
 
+    // PLUGIN: Dynamic Sidebar Legend Alignment
+    const alignSidebarLegendPlugin = {
+        id: 'alignSidebarLegend',
+        afterLayout: chart => {
+            const yScale = chart.scales.y;
+            const container = document.getElementById("datums-list");
+            if (!yScale || !container) return;
+
+            const chartCanvasRect = chart.canvas.getBoundingClientRect();
+            const sidebarRect = document.getElementById("datums-sidebar").getBoundingClientRect();
+
+            activeDatumObjects.forEach(dObj => {
+                const itemEl = document.getElementById(`datum-item-${dObj.name}`);
+                if (itemEl) {
+                    const pixelY = yScale.getPixelForValue(dObj.value);
+                    const relativePixelY = pixelY + (chartCanvasRect.top - sidebarRect.top);
+                    itemEl.style.top = `${relativePixelY}px`;
+                }
+            });
+        }
+    };
+
     async function init() {
         const urlParams = new URLSearchParams(window.location.search);
         
@@ -136,7 +313,18 @@
 
         if (urlParams.has('tz')) document.getElementById('tz-select').value = urlParams.get('tz');
         if (urlParams.has('datum')) document.getElementById('datum-select').value = urlParams.get('datum');
+        if (urlParams.has('units')) document.getElementById('units-select').value = urlParams.get('units');
         if (urlParams.has('sun')) document.getElementById('sun-angle').value = urlParams.get('sun');
+        if (urlParams.has('showSun')) document.getElementById('sun-toggle').checked = (urlParams.get('showSun') === 'true');
+
+        // BIND EVENT LISTENERS FOR AUTOMATIC UPDATING
+        document.getElementById('start-date').addEventListener('change', loadDashboard);
+        document.getElementById('end-date').addEventListener('change', loadDashboard);
+        document.getElementById('units-select').addEventListener('change', loadDashboard);
+        document.getElementById('tz-select').addEventListener('change', loadDashboard);
+        document.getElementById('datum-select').addEventListener('change', loadDashboard);
+        document.getElementById('sun-toggle').addEventListener('change', loadDashboard);
+        document.getElementById('sun-angle').addEventListener('change', loadDashboard);
 
         try {
             const res = await fetch(`${META_URL}.json`);
@@ -154,6 +342,14 @@
             });
             
             select.value = urlParams.get('station') || "8773259";
+            
+            stationSelectInstance = new TomSelect("#station-select", {
+                create: false,
+                maxOptions: null,
+                onChange: function() {
+                    loadDashboard();
+                }
+            });
             
             loadDashboard();
         } catch (err) {
@@ -189,7 +385,14 @@
         const tz = tzSelect.value;
         const tzText = tzSelect.options[tzSelect.selectedIndex].text;
         const datum = document.getElementById("datum-select").value;
+        const units = document.getElementById("units-select").value;
+        const isMetric = (units === "metric");
+        const unitLabel = isMetric ? "m" : "ft";
+
         const sunThreshold = parseFloat(document.getElementById("sun-angle").value);
+        const showSun = document.getElementById("sun-toggle").checked;
+
+        document.getElementById("datum-baseline-label").innerText = `(${datum})`;
 
         const newUrl = new URL(window.location);
         newUrl.searchParams.set('station', stationId);
@@ -197,7 +400,9 @@
         newUrl.searchParams.set('end', endDateStr);
         newUrl.searchParams.set('tz', tz);
         newUrl.searchParams.set('datum', datum);
+        newUrl.searchParams.set('units', units);
         newUrl.searchParams.set('sun', sunThreshold);
+        newUrl.searchParams.set('showSun', showSun);
         window.history.pushState({}, '', newUrl);
 
         const apiStartDate = formatApiDate(startDateStr);
@@ -211,9 +416,9 @@
         try {
             const [metaRes, datumRes, predRes, verRes] = await Promise.all([
                 fetch(`${META_URL}/${stationId}.json`).then(r => r.json()),
-                fetch(`${META_URL}/${stationId}/datums.json?units=english`).then(r => r.json()),
-                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=predictions&datum=${datum}&units=english&time_zone=${tz}&format=json`).then(r => r.json()),
-                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=water_level&datum=${datum}&units=english&time_zone=${tz}&format=json`).then(r => r.json())
+                fetch(`${META_URL}/${stationId}/datums.json?units=${units}`).then(r => r.json()),
+                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=predictions&datum=${datum}&units=${units}&time_zone=${tz}&format=json`).then(r => r.json()),
+                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=water_level&datum=${datum}&units=${units}&time_zone=${tz}&format=json`).then(r => r.json())
             ]);
 
             const stationMeta = metaRes.stations[0];
@@ -221,43 +426,90 @@
             const latitude = stationMeta.lat;
             const fullStationTitle = `${stationMeta.id}, ${stationMeta.name} ${stationMeta.state}`;
             
+            // Solar Angle Masking
             const darkBoxes = [];
-            let inDarkZone = false;
-            let darkStart = null;
-            let current = new Date(startDT.getTime());
-            const stepMs = 15 * 60 * 1000; 
-            
-            while (current <= endDT) {
-                const pos = SunCalc.getPosition(current, latitude, longitude);
-                const angleDeg = pos.altitude * (180 / Math.PI);
+            if (showSun) {
+                let inDarkZone = false;
+                let darkStart = null;
+                let current = new Date(startDT.getTime());
+                const stepMs = 15 * 60 * 1000; 
                 
-                if (angleDeg < sunThreshold) {
-                    if (!inDarkZone) {
-                        inDarkZone = true;
-                        darkStart = new Date(current.getTime());
+                while (current <= endDT) {
+                    const pos = SunCalc.getPosition(current, latitude, longitude);
+                    const angleDeg = pos.altitude * (180 / Math.PI);
+                    
+                    if (angleDeg < sunThreshold) {
+                        if (!inDarkZone) {
+                            inDarkZone = true;
+                            darkStart = new Date(current.getTime());
+                        }
+                    } else {
+                        if (inDarkZone) {
+                            inDarkZone = false;
+                            darkBoxes.push({ start: darkStart, end: new Date(current.getTime()) });
+                        }
                     }
-                } else {
-                    if (inDarkZone) {
-                        inDarkZone = false;
-                        darkBoxes.push({ start: darkStart, end: new Date(current.getTime()) });
-                    }
+                    current = new Date(current.getTime() + stepMs);
                 }
-                current = new Date(current.getTime() + stepMs);
-            }
-            if (inDarkZone) {
-                darkBoxes.push({ start: darkStart, end: new Date(endDT.getTime()) });
+                if (inDarkZone) {
+                    darkBoxes.push({ start: darkStart, end: new Date(endDT.getTime()) });
+                }
             }
 
+            // Datums relative calculation
             let mhw = null, mllw = null, mn = null;
+            let datumDict = {};
+            let selectedDatumValue = null;
+
             if (datumRes.datums) {
                 datumRes.datums.forEach(d => {
                     const val = parseFloat(d.value);
+                    datumDict[d.name] = val;
                     if (d.name === "MHW") mhw = val;
                     if (d.name === "MLLW") mllw = val;
                     if (d.name === "MN") mn = val;
+                    if (d.name === datum) selectedDatumValue = val;
                 });
             }
 
+            const xMinTime = startDT.getTime();
+            const xMaxTime = endDT.getTime();
+
+            let datumDatasets = [];
+            activeDatumObjects = [];
+            
+            if (selectedDatumValue !== null) {
+                const overlayDatums = ['MHHW', 'MHW', 'MSL', 'MTL', 'MLW', 'MLLW'];
+                overlayDatums.forEach(dName => {
+                    if (datumDict.hasOwnProperty(dName)) {
+                        const relativeVal = datumDict[dName] - selectedDatumValue;
+                        const color = DATUM_COLORS[dName] || '#666666';
+
+                        datumDatasets.push({
+                            label: `Datum: ${dName}`,
+                            datumKey: dName,
+                            data: [
+                                { x: xMinTime, y: relativeVal },
+                                { x: xMaxTime, y: relativeVal }
+                            ],
+                            borderColor: color,
+                            borderWidth: 1.5,
+                            borderDash: [4, 4],
+                            pointRadius: 0,
+                            fill: false,
+                            hidden: true // Off by default
+                        });
+
+                        activeDatumObjects.push({
+                            name: dName,
+                            value: relativeVal,
+                            color: color
+                        });
+                    }
+                });
+            }
+
+            // Arcade Tolerance Logic
             let computed_range = 0, range_type = "", tolerance = 0, errorMsg = "";
 
             if (mhw === null || mllw === null || mn === null) {
@@ -271,20 +523,23 @@
                     range_type = "Mean Range (MN)";
                 }
 
-                if (computed_range <= 5) {
-                    tolerance = 0.5;
+                const rangeThreshold = isMetric ? 1.524 : 5.0; 
+                const defaultTol = isMetric ? 0.1524 : 0.5;    
+
+                if (computed_range <= rangeThreshold) {
+                    tolerance = defaultTol;
                 } else {
                     tolerance = computed_range * 0.10;
                 }
             }
 
-            const predData = predRes.predictions ? predRes.predictions.map(d => ({ x: new Date(d.t), y: parseFloat(d.v) })) : [];
+            const predData = predRes.predictions ? predRes.predictions.map(d => ({ x: new Date(d.t).getTime(), y: parseFloat(d.v) })) : [];
             const verData = [];
             const prelimData = [];
 
             if (verRes.data) {
                 verRes.data.forEach(d => {
-                    const pt = { x: new Date(d.t), y: parseFloat(d.v) };
+                    const pt = { x: new Date(d.t).getTime(), y: parseFloat(d.v) };
                     if (d.q === 'v') {
                         verData.push(pt);
                     } else {
@@ -306,19 +561,54 @@
             if (errorMsg) {
                 chartSubtitleText = `Tolerance Status: ${errorMsg}`;
             } else {
-                chartSubtitleText = `${range_type}: ${computed_range.toFixed(2)} ft  |  RSD Computed Tolerance: ±${tolerance.toFixed(2)} ft`;
+                chartSubtitleText = `${range_type}: ${computed_range.toFixed(2)} ${unitLabel}  |  RSD Computed Tolerance: ±${tolerance.toFixed(2)} ${unitLabel}`;
             }
 
-            renderChart(chartTitleLines, chartSubtitleText, predData, verData, prelimData, datum, tolerance, errorMsg === "", showCurrentTime, darkBoxes);
+            buildDatumsSidebar(activeDatumObjects);
+            renderChart(chartTitleLines, chartSubtitleText, predData, verData, prelimData, datumDatasets, datum, tolerance, unitLabel, errorMsg === "", showCurrentTime, darkBoxes);
 
         } catch (error) {
             console.error("Dashboard failed to load:", error);
             const errorTitle = ["NOAA/NOS/CO-OPS", "Error loading data."];
-            renderChart(errorTitle, "", [], [], [], datum, 0, false, false, []);
+            renderChart(errorTitle, "", [], [], [], [], datum, 0, "ft", false, false, []);
         }
     }
 
-    function renderChart(titleLines, subtitleText, predData, verData, prelimData, currentDatum, tolerance, hasTolerance, showCurrentTime, darkBoxes) {
+    function buildDatumsSidebar(datumList) {
+        const container = document.getElementById("datums-list");
+        container.innerHTML = "";
+
+        datumList.forEach(item => {
+            const el = document.createElement("div");
+            el.className = "datum-item disabled"; 
+            el.id = `datum-item-${item.name}`;
+            el.innerHTML = `
+                <span class="datum-color-box" style="background-color: ${item.color}"></span>
+                <span class="datum-name">${item.name}</span>
+            `;
+
+            el.onclick = () => {
+                if (chartInstance) {
+                    const datasetIndex = chartInstance.data.datasets.findIndex(ds => ds.datumKey === item.name);
+                    if (datasetIndex !== -1) {
+                        const isVisible = chartInstance.isDatasetVisible(datasetIndex);
+                        chartInstance.setDatasetVisibility(datasetIndex, !isVisible);
+                        chartInstance.update();
+
+                        if (!isVisible) {
+                            el.classList.remove("disabled");
+                        } else {
+                            el.classList.add("disabled");
+                        }
+                    }
+                }
+            };
+
+            container.appendChild(el);
+        });
+    }
+
+    function renderChart(titleLines, subtitleText, predData, verData, prelimData, datumDatasets, currentDatum, tolerance, unitLabel, hasTolerance, showCurrentTime, darkBoxes) {
         const ctx = document.getElementById('tideChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
@@ -344,7 +634,7 @@
                 borderWidth: 0,
                 label: {
                     display: true,
-                    content: `±${tolerance.toFixed(2)} ft RSD Tolerance`,
+                    content: `±${tolerance.toFixed(2)} ${unitLabel} RSD Tolerance`,
                     position: 'start',
                     color: 'black',
                     backgroundColor: 'rgba(255,255,255,0.7)'
@@ -370,40 +660,41 @@
             };
         }
 
+        const allDatasets = [
+            {
+                label: 'Predictions',
+                data: predData,
+                borderColor: '#0073e6', 
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                tension: 0.4
+            },
+            {
+                label: 'Verified',
+                data: verData,
+                borderColor: '#00cc00', 
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                tension: 0.4
+            },
+            {
+                label: 'Preliminary',
+                data: prelimData,
+                borderColor: '#ff0000', 
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                tension: 0.4
+            },
+            ...datumDatasets
+        ];
+
         chartInstance = new Chart(ctx, {
             type: 'line',
-            data: {
-                datasets: [
-                    {
-                        label: 'Predictions',
-                        data: predData,
-                        borderColor: '#0073e6', 
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 5,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Verified',
-                        data: verData,
-                        borderColor: '#00cc00', 
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 5,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Preliminary',
-                        data: prelimData,
-                        borderColor: '#ff0000', 
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 5,
-                        tension: 0.4
-                    }
-                ]
-            },
-            plugins: [crosshairPlugin], 
+            data: { datasets: allDatasets },
+            plugins: [crosshairPlugin, alignSidebarLegendPlugin], 
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -415,16 +706,16 @@
                     title: {
                         display: true,
                         text: titleLines,
-                        font: { size: 14, weight: 'bold' },
+                        font: { size: 13, weight: 'bold' },
                         color: '#000',
-                        padding: { bottom: 5 }
+                        padding: { bottom: 4 }
                     },
                     subtitle: {
                         display: !!subtitleText,
                         text: subtitleText,
-                        font: { size: 13, weight: 'bold' },
+                        font: { size: 12, weight: 'bold' },
                         color: '#d9534f', 
-                        padding: { bottom: 20 }
+                        padding: { bottom: 15 }
                     },
                     legend: {
                         position: 'bottom',
@@ -432,9 +723,12 @@
                             usePointStyle: true,
                             pointStyle: 'line',
                             boxWidth: 24,
-                            padding: 20,
+                            padding: 15,
                             color: '#333',
-                            font: { weight: 'bold', size: 11 } 
+                            font: { weight: 'bold', size: 11 },
+                            filter: function(item) {
+                                return !item.text.startsWith('Datum:');
+                            }
                         }
                     },
                     annotation: annotationConfig,
@@ -442,8 +736,8 @@
                         callbacks: {
                             label: function(context) {
                                 let label = context.dataset.label || '';
-                                if (label) label += ' Water Level: ';
-                                if (context.parsed.y !== null) label += context.parsed.y.toFixed(2) + ' ft';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) label += context.parsed.y.toFixed(2) + ' ' + unitLabel;
                                 return label;
                             }
                         }
@@ -471,18 +765,17 @@
                     y: {
                         title: { 
                             display: true, 
-                            text: `Height in Feet (${currentDatum})`,
+                            text: `Height in ${unitLabel === 'm' ? 'Meters' : 'Feet'} (${currentDatum})`,
                             font: { size: 11 } 
                         },
                         ticks: { font: { size: 10 } },
                         grid: { 
-                            // --- HIGHLIGHT THE ZERO LINE ---
                             color: (context) => {
-                                if (context.tick.value === 0) return '#000000'; // Solid black for 0
-                                return '#e0e0e0'; // Light grey for everything else
+                                if (context.tick.value === 0) return '#000000';
+                                return '#e0e0e0'; 
                             },
                             lineWidth: (context) => {
-                                if (context.tick.value === 0) return 2; // Make the 0 line twice as thick
+                                if (context.tick.value === 0) return 2;
                                 return 1;
                             }
                         }
@@ -491,6 +784,12 @@
             }
         });
     }
+
+    window.addEventListener('resize', () => {
+        if (chartInstance) {
+            chartInstance.resize();
+        }
+    });
 
     window.onload = init;
 </script>
