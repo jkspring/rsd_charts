@@ -163,7 +163,24 @@
         <!-- Col 1: Station & Date Range -->
         <div class="control-col" style="flex: 1.3; min-width: 240px;">
             <div class="control-group">
-                <label><b>Station Location</b></label>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label><b>Station Location</b></label>
+                    <span style="font-size: 10px; color: #57606a;">
+                        <span style="color: #0969da; font-weight: bold;">●</span> WL &amp; Predictions
+                        &nbsp;
+                        <span style="color: #8250df; font-weight: bold;">●</span> Predictions
+                    </span>
+                </div>
+                <div class="control-row" style="margin-bottom: 2px;">
+                    <select id="station-type-filter" style="flex: 1; font-size: 11px; padding: 3px 6px;">
+                        <option value="all">All Stations</option>
+                        <option value="wl">WL &amp; Predictions</option>
+                        <option value="pred">Predictions Only</option>
+                    </select>
+                    <select id="station-state-filter" style="flex: 1; font-size: 11px; padding: 3px 6px;">
+                        <option value="all">All States</option>
+                    </select>
+                </div>
                 <select id="station-select">
                     <option value="9414290">Loading stations...</option>
                 </select>
@@ -180,44 +197,50 @@
             </div>
         </div>
 
-        <!-- Col 2: Units, Tz, Datum -->
-        <div class="control-col">
+        <!-- Col 2: Timezone, Units, Datum -->
+        <div class="control-col" style="flex: 1.15; min-width: 215px;">
+            <div class="control-group">
+                <label>Timezone</label>
+                <select id="tz-select" style="width: 100%;">
+                    <option value="station" selected>Station Local Time</option>
+                    <option value="system">Computer Time</option>
+                    <option value="utc">UTC (UTC±0)</option>
+                    <option value="America/New_York">Eastern Time (UTC-4)</option>
+                    <option value="America/Chicago">Central Time (UTC-5)</option>
+                    <option value="America/Denver">Mountain Time (UTC-6)</option>
+                    <option value="America/Los_Angeles">Pacific Time (UTC-7)</option>
+                    <option value="America/Anchorage">Alaska Time (UTC-8)</option>
+                    <option value="Pacific/Honolulu">Hawaii Time (UTC-10)</option>
+                </select>
+            </div>
             <div class="control-row">
                 <div class="control-group" style="flex: 1;">
                     <label>Units</label>
-                    <select id="units-select">
+                    <select id="units-select" style="width: 100%;">
                         <option value="english">Standard (ft)</option>
                         <option value="metric">Metric (m)</option>
                     </select>
                 </div>
                 <div class="control-group" style="flex: 1;">
-                    <label>Timezone</label>
-                    <select id="tz-select">
-                        <option value="lst_ldt">LST/LDT</option>
-                        <option value="gmt">GMT</option>
-                        <option value="lst">LST</option>
+                    <label>Datum</label>
+                    <select id="datum-select" style="width: 100%;">
+                        <option value="MLLW">MLLW</option>
+                        <option value="MHW">MHW</option>
+                        <option value="MSL">MSL</option>
+                        <option value="STND">Station Datum</option>
                     </select>
                 </div>
-            </div>
-            <div class="control-group">
-                <label>Datum</label>
-                <select id="datum-select" style="width: 100%;">
-                    <option value="MLLW">MLLW</option>
-                    <option value="MHW">MHW</option>
-                    <option value="MSL">MSL</option>
-                    <option value="STND">Station Datum</option>
-                </select>
             </div>
         </div>
 
         <!-- Col 3: Sun Angle & Date Shift -->
-        <div class="control-col">
+        <div class="control-col" style="min-width: 165px;">
             <div class="control-group">
-                <label class="control-row">
+                <label class="control-row" style="cursor: pointer;">
                     <input type="checkbox" id="sun-toggle" checked>
                     <span>Min Sun Angle (&deg;)</span>
                 </label>
-                <input type="number" id="sun-angle" value="25" step="1">
+                <input type="number" id="sun-angle" value="25" step="1" style="width: 100%;">
             </div>
             <div class="control-group">
                 <label>Shift Dates</label>
@@ -229,16 +252,16 @@
         </div>
 
         <!-- Col 4: Tide Window Highlight Tool -->
-        <div class="control-col" style="flex: 1.1;">
+        <div class="control-col" style="flex: 1.1; min-width: 180px;">
             <div class="control-group">
-                <label class="control-row">
+                <label class="control-row" style="cursor: pointer;">
                     <input type="checkbox" id="window-toggle">
                     <span><b>Highlight Tide Window</b></span>
                 </label>
-                <select id="window-target">
-                    <option value="both">High & Low Tide</option>
+                <select id="window-target" style="width: 100%;">
+                    <option value="low" selected>Low Tide Only</option>
                     <option value="high">High Tide Only</option>
-                    <option value="low">Low Tide Only</option>
+                    <option value="both">High & Low Tide</option>
                 </select>
             </div>
             <div class="control-row">
@@ -248,7 +271,7 @@
                 </div>
                 <div class="control-group" style="flex: 1;">
                     <label title="Hours after High/Low tide">+ Hours:</label>
-                    <input type="number" id="window-after" value="2.0" step="0.5" min="0" style="width: 100%;">
+                    <input type="number" id="window-after" value="0" step="0.5" min="0" style="width: 100%;">
                 </div>
             </div>
         </div>
@@ -267,8 +290,10 @@
     const META_URL = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations";
     let chartInstance = null;
     let stationSelectInstance = null;
+    let allStationList = [];
     let stationCatalogMap = {};
     let activeDatumObjects = [];
+    let lastValidStationId = "9414290";
 
     const DATUM_COLORS = {
         'MHHW': '#2b5c8f',
@@ -326,6 +351,143 @@
         }
     };
 
+    // Determines the station's true local IANA time zone
+    function resolveStationTimeZone(stationMeta) {
+        if (!stationMeta) return 'America/New_York';
+
+        if (stationMeta.timezone) {
+            try {
+                if (luxon.DateTime.now().setZone(stationMeta.timezone).isValid) {
+                    return stationMeta.timezone;
+                }
+            } catch (e) {}
+
+            const tzAbbrMap = {
+                'EST': 'America/New_York', 'EDT': 'America/New_York',
+                'CST': 'America/Chicago',  'CDT': 'America/Chicago',
+                'MST': 'America/Denver',   'MDT': 'America/Denver',
+                'PST': 'America/Los_Angeles', 'PDT': 'America/Los_Angeles',
+                'AKST': 'America/Anchorage', 'AKDT': 'America/Anchorage',
+                'HST': 'Pacific/Honolulu', 'AST': 'America/Puerto_Rico',
+                'CHST': 'Pacific/Guam', 'SST': 'Pacific/Pago_Pago',
+                'GMT': 'utc', 'UTC': 'utc'
+            };
+            const mapped = tzAbbrMap[stationMeta.timezone.toUpperCase()];
+            if (mapped) return mapped;
+        }
+
+        const stateMap = {
+            'ME': 'America/New_York', 'NH': 'America/New_York', 'VT': 'America/New_York',
+            'MA': 'America/New_York', 'RI': 'America/New_York', 'CT': 'America/New_York',
+            'NY': 'America/New_York', 'NJ': 'America/New_York', 'PA': 'America/New_York',
+            'DE': 'America/New_York', 'MD': 'America/New_York', 'DC': 'America/New_York',
+            'VA': 'America/New_York', 'NC': 'America/New_York', 'SC': 'America/New_York',
+            'GA': 'America/New_York', 'FL': 'America/New_York', 'OH': 'America/New_York',
+            'MI': 'America/New_York', 'WV': 'America/New_York',
+            
+            'AL': 'America/Chicago', 'MS': 'America/Chicago', 'TN': 'America/Chicago',
+            'KY': 'America/New_York', 'IL': 'America/Chicago', 'WI': 'America/Chicago',
+            'MN': 'America/Chicago', 'IA': 'America/Chicago', 'MO': 'America/Chicago',
+            'AR': 'America/Chicago', 'LA': 'America/Chicago', 'TX': 'America/Chicago',
+            'OK': 'America/Chicago', 'KS': 'America/Chicago', 'NE': 'America/Chicago',
+            'SD': 'America/Chicago', 'ND': 'America/Chicago',
+
+            'NM': 'America/Denver', 'CO': 'America/Denver', 'WY': 'America/Denver',
+            'MT': 'America/Denver', 'UT': 'America/Denver', 'AZ': 'America/Phoenix',
+            'ID': 'America/Boise',
+
+            'CA': 'America/Los_Angeles', 'OR': 'America/Los_Angeles', 'WA': 'America/Los_Angeles',
+            'NV': 'America/Los_Angeles',
+
+            'AK': 'America/Anchorage',
+            'HI': 'Pacific/Honolulu',
+            'PR': 'America/Puerto_Rico', 'VI': 'America/Puerto_Rico',
+            'GU': 'Pacific/Guam', 'MP': 'Pacific/Saipan', 'AS': 'Pacific/Pago_Pago'
+        };
+
+        if (stationMeta.state && stateMap[stationMeta.state.toUpperCase()]) {
+            return stateMap[stationMeta.state.toUpperCase()];
+        }
+
+        if (typeof stationMeta.timezonecorr === 'number') {
+            const corrMap = {
+                '-4': 'America/Puerto_Rico',
+                '-5': 'America/New_York',
+                '-6': 'America/Chicago',
+                '-7': 'America/Denver',
+                '-8': 'America/Los_Angeles',
+                '-9': 'America/Anchorage',
+                '-10': 'Pacific/Honolulu',
+                '10': 'Pacific/Guam'
+            };
+            if (corrMap[String(stationMeta.timezonecorr)]) {
+                return corrMap[String(stationMeta.timezonecorr)];
+            }
+        }
+
+        const lng = stationMeta.lng || 0;
+        if (lng <= -140) return 'Pacific/Honolulu';
+        if (lng <= -130) return 'America/Anchorage';
+        if (lng <= -114) return 'America/Los_Angeles';
+        if (lng <= -104) return 'America/Denver';
+        if (lng <= -85)  return 'America/Chicago';
+        if (lng <= -65)  return 'America/New_York';
+        if (lng > 0)     return 'Pacific/Guam';
+
+        return 'America/New_York';
+    }
+
+    // Updates timezone dropdown labels with dynamically calculated UTC offsets
+    function updateTimeZoneDropdownLabels(stationMeta) {
+        const tzSelect = document.getElementById("tz-select");
+        const now = luxon.DateTime.now();
+
+        function formatUtcOffset(zoneName) {
+            try {
+                const dt = now.setZone(zoneName);
+                const offsetHours = dt.offset / 60;
+                if (offsetHours === 0) return 'UTC±0';
+                return `UTC${offsetHours > 0 ? '+' : ''}${offsetHours}`;
+            } catch (e) {
+                return 'UTC';
+            }
+        }
+
+        const stationIana = resolveStationTimeZone(stationMeta);
+        const stationAbbr = now.setZone(stationIana).toFormat('ZZZZ');
+        const stationOffset = formatUtcOffset(stationIana);
+
+        const computerZone = luxon.DateTime.now().zoneName;
+        const computerOffset = formatUtcOffset(computerZone);
+
+        Array.from(tzSelect.options).forEach(opt => {
+            if (opt.value === 'station') {
+                opt.text = `Station Time (${stationAbbr}, ${stationOffset})`;
+            } else if (opt.value === 'system') {
+                opt.text = `Computer Time (${computerOffset})`;
+            } else if (opt.value === 'utc') {
+                opt.text = `UTC (UTC±0)`;
+            } else if (opt.value === 'America/New_York') {
+                opt.text = `Eastern Time (${formatUtcOffset('America/New_York')})`;
+            } else if (opt.value === 'America/Chicago') {
+                opt.text = `Central Time (${formatUtcOffset('America/Chicago')})`;
+            } else if (opt.value === 'America/Denver') {
+                opt.text = `Mountain Time (${formatUtcOffset('America/Denver')})`;
+            } else if (opt.value === 'America/Los_Angeles') {
+                opt.text = `Pacific Time (${formatUtcOffset('America/Los_Angeles')})`;
+            } else if (opt.value === 'America/Anchorage') {
+                opt.text = `Alaska Time (${formatUtcOffset('America/Anchorage')})`;
+            } else if (opt.value === 'Pacific/Honolulu') {
+                opt.text = `Hawaii Time (${formatUtcOffset('Pacific/Honolulu')})`;
+            }
+        });
+    }
+
+    function parseGmtTime(tStr) {
+        if (!tStr) return 0;
+        return Date.parse(tStr.replace(' ', 'T') + ':00Z');
+    }
+
     function interpolateTideCurve(hiloPoints, startMs, endMs, stepMinutes = 10) {
         if (!hiloPoints || hiloPoints.length < 2) return [];
         const curve = [];
@@ -369,6 +531,52 @@
         return dateStr.replace(/-/g, '');
     }
 
+    function populateStateFilter(stations) {
+        const stateSelect = document.getElementById('station-state-filter');
+        const states = new Set();
+        stations.forEach(s => {
+            if (s.state && s.state.trim().length > 0) states.add(s.state.trim().toUpperCase());
+        });
+        const sortedStates = Array.from(states).sort();
+        stateSelect.innerHTML = '<option value="all">All States</option>';
+        sortedStates.forEach(st => {
+            const opt = document.createElement('option');
+            opt.value = st;
+            opt.text = st;
+            stateSelect.appendChild(opt);
+        });
+    }
+
+    function filterStationSelect() {
+        if (!stationSelectInstance) return;
+        const typeFilter = document.getElementById('station-type-filter').value;
+        const stateFilter = document.getElementById('station-state-filter').value;
+        const currentVal = stationSelectInstance.getValue();
+
+        stationSelectInstance.clearOptions();
+
+        allStationList.forEach(st => {
+            let matchesType = true;
+            if (typeFilter === 'wl' && !st.hasWL) matchesType = false;
+            if (typeFilter === 'pred' && st.hasWL) matchesType = false;
+
+            let matchesState = true;
+            if (stateFilter !== 'all' && (st.state || '').toUpperCase() !== stateFilter) matchesState = false;
+
+            if (matchesType && matchesState || st.id === currentVal) {
+                stationSelectInstance.addOption({
+                    value: st.id,
+                    text: `${st.id} ${st.name}${st.state ? ', ' + st.state : ''}`,
+                    type: st.hasWL ? 'wl water level' : 'pred predictions'
+                });
+            }
+        });
+
+        if (currentVal) {
+            stationSelectInstance.setValue(currentVal, true);
+        }
+    }
+
     async function init() {
         const urlParams = new URLSearchParams(window.location.search);
         
@@ -383,7 +591,11 @@
         if (urlParams.has('showSun')) document.getElementById('sun-toggle').checked = (urlParams.get('showSun') === 'true');
 
         if (urlParams.has('showWin')) document.getElementById('window-toggle').checked = (urlParams.get('showWin') === 'true');
-        if (urlParams.has('winTarget')) document.getElementById('window-target').value = urlParams.get('winTarget');
+        if (urlParams.has('winTarget')) {
+            document.getElementById('window-target').value = urlParams.get('winTarget');
+        } else {
+            document.getElementById('window-target').value = 'low';
+        }
         if (urlParams.has('winBefore')) document.getElementById('window-before').value = urlParams.get('winBefore');
         if (urlParams.has('winAfter')) document.getElementById('window-after').value = urlParams.get('winAfter');
 
@@ -400,8 +612,10 @@
         document.getElementById('window-before').addEventListener('change', loadDashboard);
         document.getElementById('window-after').addEventListener('change', loadDashboard);
 
+        document.getElementById('station-type-filter').addEventListener('change', filterStationSelect);
+        document.getElementById('station-state-filter').addEventListener('change', filterStationSelect);
+
         try {
-            // Load both Water Level stations & Tide Prediction stations
             const [wlRes, tidePredRes, masterRes] = await Promise.all([
                 fetch(`${META_URL}.json?type=waterlevels`).then(r => r.json()).catch(() => ({ stations: [] })),
                 fetch(`${META_URL}.json?type=tidepredictions`).then(r => r.json()).catch(() => ({ stations: [] })),
@@ -448,31 +662,97 @@
             const select = document.getElementById('station-select');
             select.innerHTML = ''; 
 
-            const stationList = Array.from(mergedStationsMap.values());
-            stationList.forEach(st => {
+            allStationList = Array.from(mergedStationsMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            allStationList.forEach(st => {
                 stationCatalogMap[st.id] = st;
             });
 
-            const sortedStations = stationList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-            sortedStations.forEach(st => {
+            populateStateFilter(allStationList);
+
+            allStationList.forEach(st => {
                 const opt = document.createElement('option');
                 opt.value = st.id;
-                // Updated tag label based on request
-                const categoryBadge = st.hasWL ? '[WL & Predictions]' : '[Predictions]';
-                opt.text = `${st.id} ${st.name}${st.state ? ', ' + st.state : ''} — ${categoryBadge}`;
+                opt.text = `${st.id} ${st.name}${st.state ? ', ' + st.state : ''}`;
+                opt.dataset.type = st.hasWL ? 'wl water level' : 'pred predictions';
                 select.appendChild(opt);
             });
             
+            // Default station 9414290 (San Francisco, CA)
             select.value = urlParams.get('station') || "9414290";
+            lastValidStationId = select.value;
             
             stationSelectInstance = new TomSelect("#station-select", {
                 create: false,
                 maxOptions: 50,
-                onChange: function() {
-                    loadDashboard();
+                placeholder: "Search station name or ID...",
+                searchField: ['text', 'value', 'type'],
+                render: {
+                    option: function(data, escape) {
+                        const st = stationCatalogMap[data.value];
+                        const isWL = st ? st.hasWL : (data.type && data.type.includes('wl'));
+                        const color = isWL ? '#0969da' : '#8250df';
+                        const typeTitle = isWL ? 'Water Level & Predictions' : 'Predictions';
+                        return `<div style="display:flex; align-items:center; gap:8px; padding:2px 0;">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${color}; flex-shrink:0; box-shadow:0 0 0 1px rgba(0,0,0,0.15);" title="${typeTitle}"></span>
+                            <span style="font-size:12px; color:#24292f; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escape(data.text)}</span>
+                        </div>`;
+                    },
+                    item: function(data, escape) {
+                        const st = stationCatalogMap[data.value];
+                        const isWL = st ? st.hasWL : (data.type && data.type.includes('wl'));
+                        const color = isWL ? '#0969da' : '#8250df';
+                        const typeTitle = isWL ? 'Water Level & Predictions' : 'Predictions';
+                        return `<div style="display:flex; align-items:center; gap:7px; overflow:hidden; text-overflow:ellipsis;">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${color}; flex-shrink:0;" title="${typeTitle}"></span>
+                            <span style="overflow:hidden; text-overflow:ellipsis;">${escape(data.text)}</span>
+                        </div>`;
+                    }
+                },
+                onChange: function(val) {
+                    if (val) {
+                        lastValidStationId = val;
+                        loadDashboard();
+                    }
                 }
             });
-            
+
+            // Automatically clear the current station selection as soon as the user starts typing
+            stationSelectInstance.control_input.addEventListener('keydown', function(e) {
+                const isPrintable = e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+                if (isPrintable || e.key === 'Backspace' || e.key === 'Delete') {
+                    if (stationSelectInstance.items.length > 0) {
+                        stationSelectInstance.clear(true);
+                    }
+                }
+            });
+
+            // Fallback for paste, mobile input, and virtual keyboards
+            stationSelectInstance.control_input.addEventListener('input', function() {
+                if (this.value && stationSelectInstance.items.length > 0) {
+                    const typed = this.value;
+                    stationSelectInstance.clear(true);
+                    this.value = typed;
+                    stationSelectInstance.onSearchChange(typed);
+                    stationSelectInstance.open();
+                }
+            });
+
+            stationSelectInstance.on('type', function(str) {
+                if (str && stationSelectInstance.items.length > 0) {
+                    stationSelectInstance.clear(true);
+                    stationSelectInstance.control_input.value = str;
+                    stationSelectInstance.open();
+                }
+            });
+
+            // If the user clicks away without selecting a new station, restore the currently plotted station
+            stationSelectInstance.on('blur', function() {
+                if (!stationSelectInstance.getValue() && lastValidStationId) {
+                    stationSelectInstance.setValue(lastValidStationId, true);
+                }
+            });
+
+            updateTimeZoneDropdownLabels(stationCatalogMap[select.value]);
             loadDashboard();
         } catch (err) {
             console.error("Failed to load stations list", err);
@@ -495,13 +775,16 @@
     }
 
     async function loadDashboard() {
-        const stationId = document.getElementById("station-select").value;
+        const stationSelectEl = document.getElementById("station-select");
+        const stationId = stationSelectEl ? stationSelectEl.value : "";
+        if (!stationId) return;
+        lastValidStationId = stationId;
+
         const startDateStr = document.getElementById("start-date").value;
         const endDateStr = document.getElementById("end-date").value;
         
         const tzSelect = document.getElementById("tz-select");
-        const tz = tzSelect.value;
-        const tzText = tzSelect.options[tzSelect.selectedIndex].text;
+        const tzMode = tzSelect.value;
         const targetDatum = document.getElementById("datum-select").value;
         const units = document.getElementById("units-select").value;
         const isMetric = (units === "metric");
@@ -515,14 +798,14 @@
         const windowBefore = parseFloat(document.getElementById("window-before").value) || 0;
         const windowAfter = parseFloat(document.getElementById("window-after").value) || 0;
 
-        // Safely update URL params only when supported (avoids SecurityError in blob: or sandboxed preview iframes)
+        // Safely update URL params
         try {
             if (window.location.protocol.startsWith('http') && !window.location.href.startsWith('blob:')) {
                 const newUrl = new URL(window.location);
                 newUrl.searchParams.set('station', stationId);
                 newUrl.searchParams.set('start', startDateStr);
                 newUrl.searchParams.set('end', endDateStr);
-                newUrl.searchParams.set('tz', tz);
+                newUrl.searchParams.set('tz', tzMode);
                 newUrl.searchParams.set('datum', targetDatum);
                 newUrl.searchParams.set('units', units);
                 newUrl.searchParams.set('sun', sunThreshold);
@@ -533,29 +816,50 @@
                 newUrl.searchParams.set('winAfter', windowAfter);
                 window.history.pushState({}, '', newUrl);
             }
-        } catch (e) {
-            // Silently ignore history state restrictions in sandboxed iframe environments
-        }
-
-        const apiStartDate = formatApiDate(startDateStr);
-        const apiEndDate = formatApiDate(endDateStr);
-
-        const now = new Date();
-        const startDT = new Date(startDateStr.replace(/-/g, '/') + " 00:00:00");
-        const endDT = new Date(endDateStr.replace(/-/g, '/') + " 23:59:59");
-        const showCurrentTime = (now >= startDT && now <= endDT);
+        } catch (e) {}
 
         try {
-            const bufferedStart = formatApiDate(addDays(startDateStr, -1));
-            const bufferedEnd = formatApiDate(addDays(endDateStr, 1));
+            // First retrieve station metadata to resolve true station timezone
+            const metaRes = await fetch(`${META_URL}/${stationId}.json`).then(r => r.json()).catch(() => ({}));
+            const stationMeta = (metaRes.stations && metaRes.stations[0]) ? metaRes.stations[0] : (stationCatalogMap[stationId] || { id: stationId, name: 'Station', state: '', lng: 0, lat: 0 });
+            
+            updateTimeZoneDropdownLabels(stationMeta);
 
-            // Run requests concurrently
-            const [metaRes, datumRes, standardPredRes, verRes, hiloRes] = await Promise.all([
-                fetch(`${META_URL}/${stationId}.json`).then(r => r.json()).catch(() => ({})),
+            // Determine active target timezone for chart display
+            let targetZone = 'utc';
+            if (tzMode === 'station') {
+                targetZone = resolveStationTimeZone(stationMeta);
+            } else if (tzMode === 'system') {
+                targetZone = luxon.DateTime.now().zoneName;
+            } else {
+                targetZone = tzMode;
+            }
+
+            const targetZoneAbbr = luxon.DateTime.now().setZone(targetZone).toFormat('ZZZZ');
+
+            // Exact local range bounds expressed in target zone
+            const startDT = luxon.DateTime.fromISO(startDateStr + "T00:00:00", { zone: targetZone });
+            const endDT = luxon.DateTime.fromISO(endDateStr + "T23:59:59.999", { zone: targetZone });
+            const xMinTime = startDT.toMillis();
+            const xMaxTime = endDT.toMillis();
+
+            // Buffer NOAA GMT query by 1 day on each side so all requested local hours are covered
+            const gmtApiStart = startDT.minus({ days: 1 }).toUTC().toFormat('yyyyMMdd');
+            const gmtApiEnd = endDT.plus({ days: 1 }).toUTC().toFormat('yyyyMMdd');
+
+            // Subordinate High/Low interpolation needs a 2-day buffer for turning points
+            const subordinateStart = startDT.minus({ days: 2 }).toUTC().toFormat('yyyyMMdd');
+            const subordinateEnd = endDT.plus({ days: 2 }).toUTC().toFormat('yyyyMMdd');
+
+            const nowMs = Date.now();
+            const showCurrentTime = (nowMs >= xMinTime && nowMs <= xMaxTime);
+
+            // Fetch data concurrently in GMT
+            const [datumRes, standardPredRes, verRes, hiloRes] = await Promise.all([
                 fetch(`${META_URL}/${stationId}/datums.json?units=${units}`).then(r => r.json()).catch(() => ({})),
-                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=predictions&datum=${targetDatum}&units=${units}&time_zone=${tz}&format=json`).then(r => r.json()).catch(() => ({})),
-                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=water_level&datum=${targetDatum}&units=${units}&time_zone=${tz}&format=json`).then(r => r.json()).catch(() => ({})),
-                fetch(`${BASE_URL}?station=${stationId}&begin_date=${bufferedStart}&end_date=${bufferedEnd}&product=predictions&datum=MLLW&units=${units}&time_zone=${tz}&interval=hilo&format=json`).then(r => r.json()).catch(() => ({}))
+                fetch(`${BASE_URL}?station=${stationId}&begin_date=${gmtApiStart}&end_date=${gmtApiEnd}&product=predictions&datum=${targetDatum}&units=${units}&time_zone=gmt&format=json`).then(r => r.json()).catch(() => ({})),
+                fetch(`${BASE_URL}?station=${stationId}&begin_date=${gmtApiStart}&end_date=${gmtApiEnd}&product=water_level&datum=${targetDatum}&units=${units}&time_zone=gmt&format=json`).then(r => r.json()).catch(() => ({})),
+                fetch(`${BASE_URL}?station=${stationId}&begin_date=${subordinateStart}&end_date=${subordinateEnd}&product=predictions&datum=MLLW&units=${units}&time_zone=gmt&interval=hilo&format=json`).then(r => r.json()).catch(() => ({}))
             ]);
 
             let isSubordinate = false;
@@ -588,27 +892,28 @@
 
             if (hiloRes.predictions && Array.isArray(hiloRes.predictions)) {
                 rawHilo = hiloRes.predictions.map(d => ({
-                    x: new Date(d.t).getTime(),
+                    x: parseGmtTime(d.t),
                     y: parseFloat(d.v),
                     type: d.type === 'H' ? 'High' : (d.type === 'L' ? 'Low' : d.type)
                 }));
             }
 
             if (isSubordinate) {
-                predData = interpolateTideCurve(rawHilo, startDT.getTime(), endDT.getTime(), 10);
-                hiloMarkers = rawHilo.filter(pt => pt.x >= startDT.getTime() && pt.x <= endDT.getTime());
-            } else {
-                predData = predRes.predictions ? predRes.predictions.map(d => ({ x: new Date(d.t).getTime(), y: parseFloat(d.v) })) : [];
+                predData = interpolateTideCurve(rawHilo, xMinTime, xMaxTime, 10);
+                hiloMarkers = rawHilo.filter(pt => pt.x >= xMinTime && pt.x <= xMaxTime);
+            } else if (predRes.predictions && Array.isArray(predRes.predictions)) {
+                predData = predRes.predictions
+                    .map(d => ({ x: parseGmtTime(d.t), y: parseFloat(d.v) }))
+                    .filter(p => p.x >= xMinTime && p.x <= xMaxTime);
             }
 
             document.getElementById("datum-baseline-label").innerText = `(${targetDatum})`;
 
-            const stationMeta = (metaRes.stations && metaRes.stations[0]) ? metaRes.stations[0] : (stationCatalogMap[stationId] || { id: stationId, name: 'Station', state: '', lng: 0, lat: 0 });
             const longitude = stationMeta.lng || 0;
             const latitude = stationMeta.lat || 0;
             const fullStationTitle = `${stationMeta.id}, ${stationMeta.name} ${stationMeta.state || ''}`;
 
-            // RSD Tolerance Calculation (Requires Published Datums)
+            // RSD Tolerance Calculation
             let computed_range = 0, range_type = "", tolerance = 0, errorMsg = "";
             const isWestCoast = (longitude <= -114 || longitude > 0);
 
@@ -640,7 +945,6 @@
                     tolerance = computed_range * 0.10;
                 }
             } else {
-                // If MN / MHW / MLLW aren't explicitly published in the NOAA datums response, disable tolerance band.
                 errorMsg = "Tolerance not computed: No published tidal datums (MN or MHW/MLLW) are available for this station.";
             }
 
@@ -649,33 +953,33 @@
                 hiloMarkers.forEach(p => p.y -= computed_range);
             }
 
-            // Solar Angle Masking
+            // Solar Angle Masking using absolute UTC timestamps
             const darkBoxes = [];
             if (showSun && (latitude !== 0 || longitude !== 0)) {
                 let inDarkZone = false;
                 let darkStart = null;
-                let current = new Date(startDT.getTime());
+                let currentMs = xMinTime;
                 const stepMs = 15 * 60 * 1000; 
                 
-                while (current <= endDT) {
-                    const pos = SunCalc.getPosition(current, latitude, longitude);
+                while (currentMs <= xMaxTime) {
+                    const pos = SunCalc.getPosition(new Date(currentMs), latitude, longitude);
                     const angleDeg = pos.altitude * (180 / Math.PI);
                     
                     if (angleDeg < sunThreshold) {
                         if (!inDarkZone) {
                             inDarkZone = true;
-                            darkStart = new Date(current.getTime());
+                            darkStart = currentMs;
                         }
                     } else {
                         if (inDarkZone) {
                             inDarkZone = false;
-                            darkBoxes.push({ start: darkStart, end: new Date(current.getTime()) });
+                            darkBoxes.push({ start: darkStart, end: currentMs });
                         }
                     }
-                    current = new Date(current.getTime() + stepMs);
+                    currentMs += stepMs;
                 }
                 if (inDarkZone) {
-                    darkBoxes.push({ start: darkStart, end: new Date(endDT.getTime()) });
+                    darkBoxes.push({ start: darkStart, end: xMaxTime });
                 }
             }
 
@@ -694,11 +998,10 @@
                         const winStart = event.x - beforeMs;
                         const winEnd = event.x + afterMs;
 
-                        // Only include if window intersects visible chart domain
-                        if (winEnd >= startDT.getTime() && winStart <= endDT.getTime()) {
+                        if (winEnd >= xMinTime && winStart <= xMaxTime) {
                             tideWindowBoxes.push({
-                                start: Math.max(winStart, startDT.getTime()),
-                                end: Math.min(winEnd, endDT.getTime()),
+                                start: Math.max(winStart, xMinTime),
+                                end: Math.min(winEnd, xMaxTime),
                                 type: event.type,
                                 eventTime: event.x
                             });
@@ -707,9 +1010,7 @@
                 });
             }
 
-            // Datum Sidebar Lines
-            const xMinTime = startDT.getTime();
-            const xMaxTime = endDT.getTime();
+            // Datum Sidebar Lines across visible window
             let datumDatasets = [];
             activeDatumObjects = [];
             
@@ -748,22 +1049,25 @@
             const prelimData = [];
             if (verRes.data && Array.isArray(verRes.data)) {
                 verRes.data.forEach(d => {
-                    const pt = { x: new Date(d.t).getTime(), y: parseFloat(d.v) };
-                    if (d.q === 'v') {
-                        verData.push(pt);
-                    } else {
-                        prelimData.push(pt);
+                    const x = parseGmtTime(d.t);
+                    if (x >= xMinTime && x <= xMaxTime) {
+                        const pt = { x: x, y: parseFloat(d.v) };
+                        if (d.q === 'v') {
+                            verData.push(pt);
+                        } else {
+                            prelimData.push(pt);
+                        }
                     }
                 });
             }
 
-            const startDisplay = startDateStr.replace(/-/g, '/');
-            const endDisplay = endDateStr.replace(/-/g, '/');
+            const startDisplay = startDT.toFormat('yyyy/MM/dd');
+            const endDisplay = endDT.toFormat('yyyy/MM/dd');
             
             const chartTitleLines = [
                 "NOAA/NOS/CO-OPS",
                 `${isSubordinate ? 'Tide Predictions (Subordinate Station)' : 'Observed Water Levels and Predictions'} at ${fullStationTitle}`,
-                `From ${startDisplay} 00:00 ${tzText} to ${endDisplay} 23:59 ${tzText}`
+                `From ${startDisplay} 00:00 ${targetZoneAbbr} to ${endDisplay} 23:59 ${targetZoneAbbr}`
             ];
 
             let subtitleLines = [];
@@ -782,12 +1086,12 @@
             }
 
             buildDatumsSidebar(activeDatumObjects);
-            renderChart(chartTitleLines, subtitleLines, predData, hiloMarkers, verData, prelimData, datumDatasets, targetDatum, tolerance, unitLabel, (errorMsg === ""), showCurrentTime, darkBoxes, isSubordinate, tideWindowBoxes, windowBefore, windowAfter);
+            renderChart(chartTitleLines, subtitleLines, predData, hiloMarkers, verData, prelimData, datumDatasets, targetDatum, tolerance, unitLabel, (errorMsg === ""), showCurrentTime, darkBoxes, isSubordinate, tideWindowBoxes, windowBefore, windowAfter, targetZone, targetZoneAbbr, xMinTime, xMaxTime);
 
         } catch (error) {
             console.error("Dashboard failed to load:", error);
             const errorTitle = ["NOAA/NOS/CO-OPS", "Error loading station data."];
-            renderChart(errorTitle, [], [], [], [], [], [], targetDatum, 0, "ft", false, false, [], false, [], 0, 0);
+            renderChart(errorTitle, [], [], [], [], [], [], targetDatum, 0, "ft", false, false, [], false, [], 0, 0, 'utc', 'UTC', 0, 0);
         }
     }
 
@@ -836,13 +1140,12 @@
         });
     }
 
-    function renderChart(titleLines, subtitleLines, predData, hiloMarkers, verData, prelimData, datumDatasets, currentDatum, tolerance, unitLabel, hasTolerance, showCurrentTime, darkBoxes, isSubordinate, tideWindowBoxes, winBefore, winAfter) {
+    function renderChart(titleLines, subtitleLines, predData, hiloMarkers, verData, prelimData, datumDatasets, currentDatum, tolerance, unitLabel, hasTolerance, showCurrentTime, darkBoxes, isSubordinate, tideWindowBoxes, winBefore, winAfter, targetZone, targetZoneAbbr, xMinTime, xMaxTime) {
         const ctx = document.getElementById('tideChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
         let annotationConfig = { annotations: {} };
 
-        // Solar angle masking boxes
         darkBoxes.forEach((box, index) => {
             annotationConfig.annotations[`darkBox${index}`] = {
                 type: 'box',
@@ -854,7 +1157,6 @@
             };
         });
 
-        // Tide Window Highlight annotations
         if (tideWindowBoxes && tideWindowBoxes.length > 0) {
             tideWindowBoxes.forEach((win, index) => {
                 const isHigh = (win.type === 'High');
@@ -879,7 +1181,6 @@
             });
         }
 
-        // RSD Tolerance Band
         if (hasTolerance) {
             annotationConfig.annotations.toleranceBand = {
                 type: 'box',
@@ -897,12 +1198,11 @@
             };
         }
 
-        // Current Time Line
         if (showCurrentTime) {
             annotationConfig.annotations.currentTimeLine = {
                 type: 'line',
                 scaleID: 'x',
-                value: new Date(), 
+                value: Date.now(), 
                 borderColor: '#000000', 
                 borderWidth: 2,
                 label: {
@@ -952,7 +1252,6 @@
             });
         }
 
-        // High / Low Daily markers placed at far right of main legend
         if (hiloMarkers && hiloMarkers.length > 0) {
             allDatasets.push({
                 label: 'High/Low Daily',
@@ -1026,6 +1325,11 @@
                     annotation: annotationConfig,
                     tooltip: {
                         callbacks: {
+                            title: function(items) {
+                                if (!items || !items.length) return '';
+                                const dt = luxon.DateTime.fromMillis(items[0].parsed.x, { zone: targetZone });
+                                return dt.toFormat('yyyy-MM-dd HH:mm') + ' ' + targetZoneAbbr;
+                            },
                             label: function(context) {
                                 const pt = context.raw;
                                 if (pt && pt.type) {
@@ -1042,17 +1346,22 @@
                 scales: {
                     x: {
                         type: 'time',
+                        min: xMinTime,
+                        max: xMaxTime,
+                        adapters: {
+                            date: {
+                                zone: targetZone
+                            }
+                        },
                         time: { unit: 'hour' },
                         title: { display: false },
                         ticks: { 
                             maxRotation: 0,
                             font: { size: 10 }, 
                             callback: function(value) {
-                                const d = new Date(value);
-                                const hrs = String(d.getHours()).padStart(2, '0');
-                                const mins = String(d.getMinutes()).padStart(2, '0');
-                                const timeStr = `${hrs}:${mins}`;
-                                const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+                                const dt = luxon.DateTime.fromMillis(value, { zone: targetZone });
+                                const timeStr = dt.toFormat('HH:mm');
+                                const dateStr = dt.toFormat('M/d');
                                 return [timeStr, dateStr]; 
                             }
                         },
