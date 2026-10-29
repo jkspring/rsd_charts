@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NOAA Tide Tolerance Dashboard</title>
+    <title>NOAA Tide Tolerance & Prediction Dashboard</title>
     
     <!-- Core Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -29,9 +29,8 @@
             color: #333; 
         }
 
-        /* Dashboard Wrapper Container */
         #dashboard-wrapper {
-            max-width: 1400px;
+            max-width: 1450px;
             margin: 0 auto;
             background: #ffffff;
             border: 1px solid #e1e4e8;
@@ -43,7 +42,6 @@
             gap: 15px;
         }
         
-        /* Dynamic Height Chart Main Layout */
         .dashboard-main { 
             display: flex; 
             gap: 12px; 
@@ -60,7 +58,6 @@
             min-width: 0; 
         }
         
-        /* Dynamic Right Sidebar Legend */
         .datums-sidebar { 
             width: 125px; 
             border: 1px solid #e1e4e8; 
@@ -89,7 +86,6 @@
             pointer-events: none;
         }
         
-        /* Absolute Positioned Sidebar Items mapped to Y Pixel */
         .datum-item { 
             position: absolute;
             left: 6px;
@@ -113,7 +109,6 @@
         .datum-color-box { width: 14px; height: 3px; margin-right: 5px; display: inline-block; border-radius: 1px; }
         .datum-name { font-weight: bold; flex: 1; }
 
-        /* Responsive Control Panel */
         .controls-panel { 
             background: #fafbfc; 
             border: 1px solid #e1e4e8; 
@@ -125,7 +120,7 @@
             font-size: 12px; 
             border-radius: 6px; 
         }
-        .control-col { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 180px; }
+        .control-col { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 175px; }
         .control-group { display: flex; flex-direction: column; gap: 4px; }
         .control-row { display: flex; gap: 6px; align-items: center; }
         
@@ -158,20 +153,19 @@
         <div class="datums-sidebar" id="datums-sidebar">
             <div class="datums-sidebar-header">
                 <h4>Datums</h4>
-                <span class="sub" id="datum-baseline-label">(MHW)</span>
+                <span class="sub" id="datum-baseline-label">(MLLW)</span>
             </div>
-            <div class="datums-list-container" id="datums-list">
-                <!-- Dynamically positioned datum legend items -->
-            </div>
+            <div class="datums-list-container" id="datums-list"></div>
         </div>
     </div>
 
     <div class="controls-panel">
-        <div class="control-col">
+        <!-- Col 1: Station & Date Range -->
+        <div class="control-col" style="flex: 1.3; min-width: 240px;">
             <div class="control-group">
                 <label><b>Station Location</b></label>
                 <select id="station-select">
-                    <option value="8773259">Loading stations...</option>
+                    <option value="9414290">Loading stations...</option>
                 </select>
             </div>
             <div class="control-row">
@@ -186,6 +180,7 @@
             </div>
         </div>
 
+        <!-- Col 2: Units, Tz, Datum -->
         <div class="control-col">
             <div class="control-row">
                 <div class="control-group" style="flex: 1;">
@@ -207,14 +202,15 @@
             <div class="control-group">
                 <label>Datum</label>
                 <select id="datum-select" style="width: 100%;">
-                    <option value="MHW">MHW</option>
                     <option value="MLLW">MLLW</option>
+                    <option value="MHW">MHW</option>
                     <option value="MSL">MSL</option>
                     <option value="STND">Station Datum</option>
                 </select>
             </div>
         </div>
 
+        <!-- Col 3: Sun Angle & Date Shift -->
         <div class="control-col">
             <div class="control-group">
                 <label class="control-row">
@@ -232,7 +228,33 @@
             </div>
         </div>
 
-        <div class="control-col" style="flex: 0 0 100px; justify-content: flex-end;">
+        <!-- Col 4: Tide Window Highlight Tool -->
+        <div class="control-col" style="flex: 1.1;">
+            <div class="control-group">
+                <label class="control-row">
+                    <input type="checkbox" id="window-toggle">
+                    <span><b>Highlight Tide Window</b></span>
+                </label>
+                <select id="window-target">
+                    <option value="both">High & Low Tide</option>
+                    <option value="high">High Tide Only</option>
+                    <option value="low">Low Tide Only</option>
+                </select>
+            </div>
+            <div class="control-row">
+                <div class="control-group" style="flex: 1;">
+                    <label title="Hours before High/Low tide">- Hours:</label>
+                    <input type="number" id="window-before" value="2.0" step="0.5" min="0" style="width: 100%;">
+                </div>
+                <div class="control-group" style="flex: 1;">
+                    <label title="Hours after High/Low tide">+ Hours:</label>
+                    <input type="number" id="window-after" value="2.0" step="0.5" min="0" style="width: 100%;">
+                </div>
+            </div>
+        </div>
+
+        <!-- Col 5: Action Button -->
+        <div class="control-col" style="flex: 0 0 90px; justify-content: flex-end;">
             <div class="control-group">
                 <button class="btn-primary" style="height: 36px;" onclick="loadDashboard()">↻ Plot</button>
             </div>
@@ -245,6 +267,7 @@
     const META_URL = "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations";
     let chartInstance = null;
     let stationSelectInstance = null;
+    let stationCatalogMap = {};
     let activeDatumObjects = [];
 
     const DATUM_COLORS = {
@@ -282,7 +305,6 @@
         }
     };
 
-    // PLUGIN: Dynamic Sidebar Legend Alignment
     const alignSidebarLegendPlugin = {
         id: 'alignSidebarLegend',
         afterLayout: chart => {
@@ -304,6 +326,49 @@
         }
     };
 
+    function interpolateTideCurve(hiloPoints, startMs, endMs, stepMinutes = 10) {
+        if (!hiloPoints || hiloPoints.length < 2) return [];
+        const curve = [];
+        const stepMs = stepMinutes * 60 * 1000;
+
+        for (let i = 0; i < hiloPoints.length - 1; i++) {
+            const p1 = hiloPoints[i];
+            const p2 = hiloPoints[i + 1];
+            const t1 = p1.x;
+            const t2 = p2.x;
+            const v1 = p1.y;
+            const v2 = p2.y;
+            const dt = t2 - t1;
+
+            let t = t1;
+            while (t < t2) {
+                if (t >= startMs && t <= endMs) {
+                    const fraction = (t - t1) / dt;
+                    const y = v1 + (v2 - v1) * (1 - Math.cos(Math.PI * fraction)) / 2;
+                    curve.push({ x: t, y: y });
+                }
+                t += stepMs;
+            }
+        }
+        
+        const lastPt = hiloPoints[hiloPoints.length - 1];
+        if (lastPt.x >= startMs && lastPt.x <= endMs) {
+            curve.push({ x: lastPt.x, y: lastPt.y });
+        }
+
+        return curve;
+    }
+
+    function addDays(dateStr, days) {
+        const d = new Date(dateStr.replace(/-/g, '/') + " 12:00:00");
+        d.setDate(d.getDate() + days);
+        return d.toISOString().split('T')[0];
+    }
+
+    function formatApiDate(dateStr) {
+        return dateStr.replace(/-/g, '');
+    }
+
     async function init() {
         const urlParams = new URLSearchParams(window.location.search);
         
@@ -317,7 +382,11 @@
         if (urlParams.has('sun')) document.getElementById('sun-angle').value = urlParams.get('sun');
         if (urlParams.has('showSun')) document.getElementById('sun-toggle').checked = (urlParams.get('showSun') === 'true');
 
-        // BIND EVENT LISTENERS FOR AUTOMATIC UPDATING
+        if (urlParams.has('showWin')) document.getElementById('window-toggle').checked = (urlParams.get('showWin') === 'true');
+        if (urlParams.has('winTarget')) document.getElementById('window-target').value = urlParams.get('winTarget');
+        if (urlParams.has('winBefore')) document.getElementById('window-before').value = urlParams.get('winBefore');
+        if (urlParams.has('winAfter')) document.getElementById('window-after').value = urlParams.get('winAfter');
+
         document.getElementById('start-date').addEventListener('change', loadDashboard);
         document.getElementById('end-date').addEventListener('change', loadDashboard);
         document.getElementById('units-select').addEventListener('change', loadDashboard);
@@ -326,26 +395,79 @@
         document.getElementById('sun-toggle').addEventListener('change', loadDashboard);
         document.getElementById('sun-angle').addEventListener('change', loadDashboard);
 
+        document.getElementById('window-toggle').addEventListener('change', loadDashboard);
+        document.getElementById('window-target').addEventListener('change', loadDashboard);
+        document.getElementById('window-before').addEventListener('change', loadDashboard);
+        document.getElementById('window-after').addEventListener('change', loadDashboard);
+
         try {
-            const res = await fetch(`${META_URL}.json`);
-            const data = await res.json();
+            // Load both Water Level stations & Tide Prediction stations
+            const [wlRes, tidePredRes, masterRes] = await Promise.all([
+                fetch(`${META_URL}.json?type=waterlevels`).then(r => r.json()).catch(() => ({ stations: [] })),
+                fetch(`${META_URL}.json?type=tidepredictions`).then(r => r.json()).catch(() => ({ stations: [] })),
+                fetch(`${META_URL}.json`).then(r => r.json()).catch(() => ({ stations: [] }))
+            ]);
             
+            const wlStationIds = new Set((wlRes.stations || []).map(s => s.id));
+            const masterMap = {};
+            (masterRes.stations || []).forEach(st => {
+                masterMap[st.id] = st;
+            });
+
+            const mergedStationsMap = new Map();
+
+            (tidePredRes.stations || []).forEach(st => {
+                const officialSt = masterMap[st.id];
+                const officialName = (officialSt && officialSt.name) ? officialSt.name : st.name;
+                const state = (officialSt && officialSt.state) ? officialSt.state : (st.state || '');
+
+                mergedStationsMap.set(st.id, {
+                    id: st.id,
+                    name: officialName,
+                    state: state,
+                    hasWL: wlStationIds.has(st.id),
+                    lat: st.lat || (officialSt ? officialSt.lat : 0),
+                    lng: st.lng || (officialSt ? officialSt.lng : 0)
+                });
+            });
+
+            (masterRes.stations || []).forEach(st => {
+                if (!mergedStationsMap.has(st.id)) {
+                    mergedStationsMap.set(st.id, {
+                        id: st.id,
+                        name: st.name,
+                        state: st.state || '',
+                        hasWL: wlStationIds.has(st.id),
+                        lat: st.lat || 0,
+                        lng: st.lng || 0
+                    });
+                }
+            });
+
+            stationCatalogMap = {};
             const select = document.getElementById('station-select');
             select.innerHTML = ''; 
-            
-            const sortedStations = data.stations.sort((a, b) => a.name.localeCompare(b.name));
+
+            const stationList = Array.from(mergedStationsMap.values());
+            stationList.forEach(st => {
+                stationCatalogMap[st.id] = st;
+            });
+
+            const sortedStations = stationList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             sortedStations.forEach(st => {
                 const opt = document.createElement('option');
                 opt.value = st.id;
-                opt.text = `${st.id} ${st.name}, ${st.state}`;
+                // Updated tag label based on request
+                const categoryBadge = st.hasWL ? '[WL & Predictions]' : '[Predictions]';
+                opt.text = `${st.id} ${st.name}${st.state ? ', ' + st.state : ''} — ${categoryBadge}`;
                 select.appendChild(opt);
             });
             
-            select.value = urlParams.get('station') || "8773259";
+            select.value = urlParams.get('station') || "9414290";
             
             stationSelectInstance = new TomSelect("#station-select", {
                 create: false,
-                maxOptions: null,
+                maxOptions: 50,
                 onChange: function() {
                     loadDashboard();
                 }
@@ -353,7 +475,7 @@
             
             loadDashboard();
         } catch (err) {
-            console.error("Failed to load stations", err);
+            console.error("Failed to load stations list", err);
         }
     }
 
@@ -372,10 +494,6 @@
         loadDashboard();
     }
 
-    function formatApiDate(dateStr) {
-        return dateStr.replace(/-/g, '');
-    }
-
     async function loadDashboard() {
         const stationId = document.getElementById("station-select").value;
         const startDateStr = document.getElementById("start-date").value;
@@ -384,7 +502,7 @@
         const tzSelect = document.getElementById("tz-select");
         const tz = tzSelect.value;
         const tzText = tzSelect.options[tzSelect.selectedIndex].text;
-        const datum = document.getElementById("datum-select").value;
+        const targetDatum = document.getElementById("datum-select").value;
         const units = document.getElementById("units-select").value;
         const isMetric = (units === "metric");
         const unitLabel = isMetric ? "m" : "ft";
@@ -392,18 +510,32 @@
         const sunThreshold = parseFloat(document.getElementById("sun-angle").value);
         const showSun = document.getElementById("sun-toggle").checked;
 
-        document.getElementById("datum-baseline-label").innerText = `(${datum})`;
+        const showWindow = document.getElementById("window-toggle").checked;
+        const windowTarget = document.getElementById("window-target").value;
+        const windowBefore = parseFloat(document.getElementById("window-before").value) || 0;
+        const windowAfter = parseFloat(document.getElementById("window-after").value) || 0;
 
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.set('station', stationId);
-        newUrl.searchParams.set('start', startDateStr);
-        newUrl.searchParams.set('end', endDateStr);
-        newUrl.searchParams.set('tz', tz);
-        newUrl.searchParams.set('datum', datum);
-        newUrl.searchParams.set('units', units);
-        newUrl.searchParams.set('sun', sunThreshold);
-        newUrl.searchParams.set('showSun', showSun);
-        window.history.pushState({}, '', newUrl);
+        // Safely update URL params only when supported (avoids SecurityError in blob: or sandboxed preview iframes)
+        try {
+            if (window.location.protocol.startsWith('http') && !window.location.href.startsWith('blob:')) {
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('station', stationId);
+                newUrl.searchParams.set('start', startDateStr);
+                newUrl.searchParams.set('end', endDateStr);
+                newUrl.searchParams.set('tz', tz);
+                newUrl.searchParams.set('datum', targetDatum);
+                newUrl.searchParams.set('units', units);
+                newUrl.searchParams.set('sun', sunThreshold);
+                newUrl.searchParams.set('showSun', showSun);
+                newUrl.searchParams.set('showWin', showWindow);
+                newUrl.searchParams.set('winTarget', windowTarget);
+                newUrl.searchParams.set('winBefore', windowBefore);
+                newUrl.searchParams.set('winAfter', windowAfter);
+                window.history.pushState({}, '', newUrl);
+            }
+        } catch (e) {
+            // Silently ignore history state restrictions in sandboxed iframe environments
+        }
 
         const apiStartDate = formatApiDate(startDateStr);
         const apiEndDate = formatApiDate(endDateStr);
@@ -414,21 +546,112 @@
         const showCurrentTime = (now >= startDT && now <= endDT);
 
         try {
-            const [metaRes, datumRes, predRes, verRes] = await Promise.all([
-                fetch(`${META_URL}/${stationId}.json`).then(r => r.json()),
-                fetch(`${META_URL}/${stationId}/datums.json?units=${units}`).then(r => r.json()),
-                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=predictions&datum=${datum}&units=${units}&time_zone=${tz}&format=json`).then(r => r.json()),
-                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=water_level&datum=${datum}&units=${units}&time_zone=${tz}&format=json`).then(r => r.json())
+            const bufferedStart = formatApiDate(addDays(startDateStr, -1));
+            const bufferedEnd = formatApiDate(addDays(endDateStr, 1));
+
+            // Run requests concurrently
+            const [metaRes, datumRes, standardPredRes, verRes, hiloRes] = await Promise.all([
+                fetch(`${META_URL}/${stationId}.json`).then(r => r.json()).catch(() => ({})),
+                fetch(`${META_URL}/${stationId}/datums.json?units=${units}`).then(r => r.json()).catch(() => ({})),
+                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=predictions&datum=${targetDatum}&units=${units}&time_zone=${tz}&format=json`).then(r => r.json()).catch(() => ({})),
+                fetch(`${BASE_URL}?station=${stationId}&begin_date=${apiStartDate}&end_date=${apiEndDate}&product=water_level&datum=${targetDatum}&units=${units}&time_zone=${tz}&format=json`).then(r => r.json()).catch(() => ({})),
+                fetch(`${BASE_URL}?station=${stationId}&begin_date=${bufferedStart}&end_date=${bufferedEnd}&product=predictions&datum=MLLW&units=${units}&time_zone=${tz}&interval=hilo&format=json`).then(r => r.json()).catch(() => ({}))
             ]);
 
-            const stationMeta = metaRes.stations[0];
-            const longitude = stationMeta.lng;
-            const latitude = stationMeta.lat;
-            const fullStationTitle = `${stationMeta.id}, ${stationMeta.name} ${stationMeta.state}`;
-            
+            let isSubordinate = false;
+            let predRes = standardPredRes;
+
+            if (standardPredRes.error && standardPredRes.error.message && standardPredRes.error.message.toLowerCase().includes("subordinate")) {
+                isSubordinate = true;
+            } else if (!standardPredRes.predictions && !verRes.data) {
+                isSubordinate = true;
+            }
+
+            let mhw = null, mllw = null, mn = null;
+            let datumDict = {};
+            let selectedDatumValue = null;
+
+            if (datumRes && datumRes.datums && Array.isArray(datumRes.datums)) {
+                datumRes.datums.forEach(d => {
+                    const val = parseFloat(d.value);
+                    datumDict[d.name] = val;
+                    if (d.name === "MHW") mhw = val;
+                    if (d.name === "MLLW") mllw = val;
+                    if (d.name === "MN") mn = val;
+                    if (d.name === targetDatum) selectedDatumValue = val;
+                });
+            }
+
+            let predData = [];
+            let hiloMarkers = [];
+            let rawHilo = [];
+
+            if (hiloRes.predictions && Array.isArray(hiloRes.predictions)) {
+                rawHilo = hiloRes.predictions.map(d => ({
+                    x: new Date(d.t).getTime(),
+                    y: parseFloat(d.v),
+                    type: d.type === 'H' ? 'High' : (d.type === 'L' ? 'Low' : d.type)
+                }));
+            }
+
+            if (isSubordinate) {
+                predData = interpolateTideCurve(rawHilo, startDT.getTime(), endDT.getTime(), 10);
+                hiloMarkers = rawHilo.filter(pt => pt.x >= startDT.getTime() && pt.x <= endDT.getTime());
+            } else {
+                predData = predRes.predictions ? predRes.predictions.map(d => ({ x: new Date(d.t).getTime(), y: parseFloat(d.v) })) : [];
+            }
+
+            document.getElementById("datum-baseline-label").innerText = `(${targetDatum})`;
+
+            const stationMeta = (metaRes.stations && metaRes.stations[0]) ? metaRes.stations[0] : (stationCatalogMap[stationId] || { id: stationId, name: 'Station', state: '', lng: 0, lat: 0 });
+            const longitude = stationMeta.lng || 0;
+            const latitude = stationMeta.lat || 0;
+            const fullStationTitle = `${stationMeta.id}, ${stationMeta.name} ${stationMeta.state || ''}`;
+
+            // RSD Tolerance Calculation (Requires Published Datums)
+            let computed_range = 0, range_type = "", tolerance = 0, errorMsg = "";
+            const isWestCoast = (longitude <= -114 || longitude > 0);
+
+            if (isWestCoast) {
+                if (mhw !== null && mllw !== null) {
+                    computed_range = mhw - mllw;
+                    range_type = "Diurnal Range (MHW-MLLW, Published)";
+                } else if (mn !== null) {
+                    computed_range = mn;
+                    range_type = "Mean Range (MN, Published)";
+                }
+            } else {
+                if (mn !== null) {
+                    computed_range = mn;
+                    range_type = "Mean Range (MN, Published)";
+                } else if (mhw !== null && mllw !== null) {
+                    computed_range = mhw - mllw;
+                    range_type = "Computed Range (MHW-MLLW, Published)";
+                }
+            }
+
+            if (computed_range > 0) {
+                const rangeThreshold = isMetric ? 1.524 : 5.0; 
+                const defaultTol = isMetric ? 0.1524 : 0.5;    
+
+                if (computed_range <= rangeThreshold) {
+                    tolerance = defaultTol;
+                } else {
+                    tolerance = computed_range * 0.10;
+                }
+            } else {
+                // If MN / MHW / MLLW aren't explicitly published in the NOAA datums response, disable tolerance band.
+                errorMsg = "Tolerance not computed: No published tidal datums (MN or MHW/MLLW) are available for this station.";
+            }
+
+            if (isSubordinate && targetDatum === "MHW" && computed_range > 0) {
+                predData.forEach(p => p.y -= computed_range);
+                hiloMarkers.forEach(p => p.y -= computed_range);
+            }
+
             // Solar Angle Masking
             const darkBoxes = [];
-            if (showSun) {
+            if (showSun && (latitude !== 0 || longitude !== 0)) {
                 let inDarkZone = false;
                 let darkStart = null;
                 let current = new Date(startDT.getTime());
@@ -456,25 +679,37 @@
                 }
             }
 
-            // Datums relative calculation
-            let mhw = null, mllw = null, mn = null;
-            let datumDict = {};
-            let selectedDatumValue = null;
+            // Tide Window Highlight Calculation
+            const tideWindowBoxes = [];
+            if (showWindow && rawHilo.length > 0) {
+                const beforeMs = windowBefore * 3600 * 1000;
+                const afterMs = windowAfter * 3600 * 1000;
 
-            if (datumRes.datums) {
-                datumRes.datums.forEach(d => {
-                    const val = parseFloat(d.value);
-                    datumDict[d.name] = val;
-                    if (d.name === "MHW") mhw = val;
-                    if (d.name === "MLLW") mllw = val;
-                    if (d.name === "MN") mn = val;
-                    if (d.name === datum) selectedDatumValue = val;
+                rawHilo.forEach(event => {
+                    const matchesTarget = (windowTarget === 'both') || 
+                                          (windowTarget === 'high' && event.type === 'High') || 
+                                          (windowTarget === 'low' && event.type === 'Low');
+                    
+                    if (matchesTarget) {
+                        const winStart = event.x - beforeMs;
+                        const winEnd = event.x + afterMs;
+
+                        // Only include if window intersects visible chart domain
+                        if (winEnd >= startDT.getTime() && winStart <= endDT.getTime()) {
+                            tideWindowBoxes.push({
+                                start: Math.max(winStart, startDT.getTime()),
+                                end: Math.min(winEnd, endDT.getTime()),
+                                type: event.type,
+                                eventTime: event.x
+                            });
+                        }
+                    }
                 });
             }
 
+            // Datum Sidebar Lines
             const xMinTime = startDT.getTime();
             const xMaxTime = endDT.getTime();
-
             let datumDatasets = [];
             activeDatumObjects = [];
             
@@ -497,7 +732,7 @@
                             borderDash: [4, 4],
                             pointRadius: 0,
                             fill: false,
-                            hidden: true // Off by default
+                            hidden: true 
                         });
 
                         activeDatumObjects.push({
@@ -509,35 +744,9 @@
                 });
             }
 
-            // Arcade Tolerance Logic
-            let computed_range = 0, range_type = "", tolerance = 0, errorMsg = "";
-
-            if (mhw === null || mllw === null || mn === null) {
-                errorMsg = "Required datums missing (MHW, MLLW, or MN). Cannot compute tolerance.";
-            } else {
-                if (longitude <= -114 || longitude > 0) {
-                    computed_range = mhw - mllw;
-                    range_type = "Computed Range (MHW-MLLW)";
-                } else {
-                    computed_range = mn;
-                    range_type = "Mean Range (MN)";
-                }
-
-                const rangeThreshold = isMetric ? 1.524 : 5.0; 
-                const defaultTol = isMetric ? 0.1524 : 0.5;    
-
-                if (computed_range <= rangeThreshold) {
-                    tolerance = defaultTol;
-                } else {
-                    tolerance = computed_range * 0.10;
-                }
-            }
-
-            const predData = predRes.predictions ? predRes.predictions.map(d => ({ x: new Date(d.t).getTime(), y: parseFloat(d.v) })) : [];
             const verData = [];
             const prelimData = [];
-
-            if (verRes.data) {
+            if (verRes.data && Array.isArray(verRes.data)) {
                 verRes.data.forEach(d => {
                     const pt = { x: new Date(d.t).getTime(), y: parseFloat(d.v) };
                     if (d.q === 'v') {
@@ -553,30 +762,49 @@
             
             const chartTitleLines = [
                 "NOAA/NOS/CO-OPS",
-                `Observed Water Levels at ${fullStationTitle}`,
+                `${isSubordinate ? 'Tide Predictions (Subordinate Station)' : 'Observed Water Levels and Predictions'} at ${fullStationTitle}`,
                 `From ${startDisplay} 00:00 ${tzText} to ${endDisplay} 23:59 ${tzText}`
             ];
 
-            let chartSubtitleText = "";
+            let subtitleLines = [];
             if (errorMsg) {
-                chartSubtitleText = `Tolerance Status: ${errorMsg}`;
+                let msg = `Tolerance Status: ${errorMsg}`;
+                if (isSubordinate) msg += " (Subordinate Station)";
+                subtitleLines.push(msg);
             } else {
-                chartSubtitleText = `${range_type}: ${computed_range.toFixed(2)} ${unitLabel}  |  RSD Computed Tolerance: ±${tolerance.toFixed(2)} ${unitLabel}`;
+                let line = `${range_type}: ${computed_range.toFixed(2)} ${unitLabel}  |  RSD Computed Tolerance: ±${tolerance.toFixed(2)} ${unitLabel}`;
+                if (isSubordinate) {
+                    line += `  (Subordinate Station)`;
+                } else if (verData.length === 0 && prelimData.length === 0 && predData.length > 0) {
+                    line += `  (Predictions Only - Non-NWLON)`;
+                }
+                subtitleLines.push(line);
             }
 
             buildDatumsSidebar(activeDatumObjects);
-            renderChart(chartTitleLines, chartSubtitleText, predData, verData, prelimData, datumDatasets, datum, tolerance, unitLabel, errorMsg === "", showCurrentTime, darkBoxes);
+            renderChart(chartTitleLines, subtitleLines, predData, hiloMarkers, verData, prelimData, datumDatasets, targetDatum, tolerance, unitLabel, (errorMsg === ""), showCurrentTime, darkBoxes, isSubordinate, tideWindowBoxes, windowBefore, windowAfter);
 
         } catch (error) {
             console.error("Dashboard failed to load:", error);
-            const errorTitle = ["NOAA/NOS/CO-OPS", "Error loading data."];
-            renderChart(errorTitle, "", [], [], [], [], datum, 0, "ft", false, false, []);
+            const errorTitle = ["NOAA/NOS/CO-OPS", "Error loading station data."];
+            renderChart(errorTitle, [], [], [], [], [], [], targetDatum, 0, "ft", false, false, [], false, [], 0, 0);
         }
     }
 
     function buildDatumsSidebar(datumList) {
         const container = document.getElementById("datums-list");
         container.innerHTML = "";
+
+        if (datumList.length === 0) {
+            const noData = document.createElement("div");
+            noData.style.padding = "10px 5px";
+            noData.style.fontSize = "10px";
+            noData.style.color = "#999";
+            noData.style.textAlign = "center";
+            noData.innerText = "No Datums Published";
+            container.appendChild(noData);
+            return;
+        }
 
         datumList.forEach(item => {
             const el = document.createElement("div");
@@ -608,12 +836,13 @@
         });
     }
 
-    function renderChart(titleLines, subtitleText, predData, verData, prelimData, datumDatasets, currentDatum, tolerance, unitLabel, hasTolerance, showCurrentTime, darkBoxes) {
+    function renderChart(titleLines, subtitleLines, predData, hiloMarkers, verData, prelimData, datumDatasets, currentDatum, tolerance, unitLabel, hasTolerance, showCurrentTime, darkBoxes, isSubordinate, tideWindowBoxes, winBefore, winAfter) {
         const ctx = document.getElementById('tideChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
         let annotationConfig = { annotations: {} };
 
+        // Solar angle masking boxes
         darkBoxes.forEach((box, index) => {
             annotationConfig.annotations[`darkBox${index}`] = {
                 type: 'box',
@@ -625,6 +854,32 @@
             };
         });
 
+        // Tide Window Highlight annotations
+        if (tideWindowBoxes && tideWindowBoxes.length > 0) {
+            tideWindowBoxes.forEach((win, index) => {
+                const isHigh = (win.type === 'High');
+                annotationConfig.annotations[`tideWinBox${index}`] = {
+                    type: 'box',
+                    xMin: win.start,
+                    xMax: win.end,
+                    backgroundColor: isHigh ? 'rgba(255, 152, 0, 0.16)' : 'rgba(33, 150, 243, 0.16)',
+                    borderColor: isHigh ? 'rgba(230, 81, 0, 0.45)' : 'rgba(25, 118, 210, 0.45)',
+                    borderWidth: 1,
+                    borderDash: [3, 3],
+                    drawTime: 'beforeDatasetsDraw',
+                    label: {
+                        display: true,
+                        content: `${win.type} Tide Window (-${winBefore}h/+${winAfter}h)`,
+                        position: { x: 'center', y: 'start' },
+                        backgroundColor: isHigh ? 'rgba(255, 243, 224, 0.9)' : 'rgba(227, 242, 253, 0.9)',
+                        color: isHigh ? '#b73800' : '#0d47a1',
+                        font: { size: 9, weight: 'bold' }
+                    }
+                };
+            });
+        }
+
+        // RSD Tolerance Band
         if (hasTolerance) {
             annotationConfig.annotations.toleranceBand = {
                 type: 'box',
@@ -634,7 +889,7 @@
                 borderWidth: 0,
                 label: {
                     display: true,
-                    content: `±${tolerance.toFixed(2)} ${unitLabel} RSD Tolerance`,
+                    content: `±${tolerance.toFixed(2)} ${unitLabel} RSD Tolerance (${currentDatum})`,
                     position: 'start',
                     color: 'black',
                     backgroundColor: 'rgba(255,255,255,0.7)'
@@ -642,6 +897,7 @@
             };
         }
 
+        // Current Time Line
         if (showCurrentTime) {
             annotationConfig.annotations.currentTimeLine = {
                 type: 'line',
@@ -667,10 +923,13 @@
                 borderColor: '#0073e6', 
                 borderWidth: 2,
                 pointRadius: 0,
-                pointHoverRadius: 5,
-                tension: 0.4
-            },
-            {
+                pointHoverRadius: 4,
+                tension: isSubordinate ? 0.1 : 0.4
+            }
+        ];
+
+        if (verData.length > 0) {
+            allDatasets.push({
                 label: 'Verified',
                 data: verData,
                 borderColor: '#00cc00', 
@@ -678,8 +937,11 @@
                 pointRadius: 0,
                 pointHoverRadius: 5,
                 tension: 0.4
-            },
-            {
+            });
+        }
+
+        if (prelimData.length > 0) {
+            allDatasets.push({
                 label: 'Preliminary',
                 data: prelimData,
                 borderColor: '#ff0000', 
@@ -687,9 +949,24 @@
                 pointRadius: 0,
                 pointHoverRadius: 5,
                 tension: 0.4
-            },
-            ...datumDatasets
-        ];
+            });
+        }
+
+        // High / Low Daily markers placed at far right of main legend
+        if (hiloMarkers && hiloMarkers.length > 0) {
+            allDatasets.push({
+                label: 'High/Low Daily',
+                data: hiloMarkers,
+                borderColor: '#e65100',
+                backgroundColor: '#ff9800',
+                pointRadius: 2.5,
+                pointHoverRadius: 5,
+                showLine: false,
+                pointStyle: 'circle'
+            });
+        }
+
+        allDatasets.push(...datumDatasets);
 
         chartInstance = new Chart(ctx, {
             type: 'line',
@@ -711,10 +988,10 @@
                         padding: { bottom: 4 }
                     },
                     subtitle: {
-                        display: !!subtitleText,
-                        text: subtitleText,
-                        font: { size: 12, weight: 'bold' },
-                        color: '#d9534f', 
+                        display: subtitleLines && subtitleLines.length > 0,
+                        text: subtitleLines,
+                        font: { size: 11, weight: 'bold' },
+                        color: isSubordinate ? '#0066cc' : '#d9534f', 
                         padding: { bottom: 15 }
                     },
                     legend: {
@@ -728,6 +1005,21 @@
                             font: { weight: 'bold', size: 11 },
                             filter: function(item) {
                                 return !item.text.startsWith('Datum:');
+                            },
+                            generateLabels: function(chart) {
+                                const orig = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                orig.forEach(item => {
+                                    const ds = chart.data.datasets[item.datasetIndex];
+                                    if (ds && ds.label === 'High/Low Daily') {
+                                        item.pointStyle = 'circle';
+                                        item.boxWidth = 7;
+                                    } else {
+                                        item.pointStyle = 'line';
+                                        item.boxWidth = 24;
+                                        item.lineWidth = 2;
+                                    }
+                                });
+                                return orig;
                             }
                         }
                     },
@@ -735,6 +1027,10 @@
                     tooltip: {
                         callbacks: {
                             label: function(context) {
+                                const pt = context.raw;
+                                if (pt && pt.type) {
+                                    return `${pt.type} Tide: ${pt.y.toFixed(2)} ${unitLabel}`;
+                                }
                                 let label = context.dataset.label || '';
                                 if (label) label += ': ';
                                 if (context.parsed.y !== null) label += context.parsed.y.toFixed(2) + ' ' + unitLabel;
