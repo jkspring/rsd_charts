@@ -30,7 +30,7 @@
         }
 
         #dashboard-wrapper {
-            max-width: 1450px;
+            max-width: 1520px;
             margin: 0 auto;
             background: #ffffff;
             border: 1px solid #e1e4e8;
@@ -42,12 +42,13 @@
             gap: 15px;
         }
         
+        /* Main Chart Area - Full width with Datums on the right */
         .dashboard-main { 
             display: flex; 
             gap: 12px; 
-            height: 60vh; 
-            min-height: 380px; 
-            max-height: 650px; 
+            height: 62vh; 
+            min-height: 420px; 
+            max-height: 700px; 
             width: 100%; 
         }
         
@@ -58,6 +59,7 @@
             min-width: 0; 
         }
         
+        /* Datums Sidebar on the Right */
         .datums-sidebar { 
             width: 125px; 
             border: 1px solid #e1e4e8; 
@@ -109,18 +111,27 @@
         .datum-color-box { width: 14px; height: 3px; margin-right: 5px; display: inline-block; border-radius: 1px; }
         .datum-name { font-weight: bold; flex: 1; }
 
+        /* Bottom Section: Controls + Tide Table Side-by-Side */
+        .bottom-container {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+            width: 100%;
+        }
+
         .controls-panel { 
+            flex: 1;
             background: #fafbfc; 
             border: 1px solid #e1e4e8; 
             padding: 12px 15px; 
             display: flex; 
             flex-wrap: wrap; 
             justify-content: space-between;
-            gap: 15px; 
+            gap: 12px; 
             font-size: 12px; 
             border-radius: 6px; 
         }
-        .control-col { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 175px; }
+        .control-col { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 165px; }
         .control-group { display: flex; flex-direction: column; gap: 4px; }
         .control-row { display: flex; gap: 6px; align-items: center; }
         
@@ -136,15 +147,132 @@
         .ts-wrapper { width: 100% !important; font-size: 12px; }
         input[type="number"] { width: 60px; }
         
-        .btn-primary { background: #0969da; color: white; border: none; font-weight: bold; cursor: pointer; padding: 6px 14px; border-radius: 4px; }
+        .btn-primary { 
+            background: #0969da; 
+            color: white; 
+            border: none; 
+            font-weight: bold; 
+            cursor: pointer; 
+            padding: 6px 14px; 
+            border-radius: 4px; 
+        }
         .btn-primary:hover { background: #0256b3; }
         .btn-secondary { background: #f6f8fa; border: 1px solid #d0d7de; cursor: pointer; flex: 1; font-weight: 500; }
         .btn-secondary:hover { background: #f3f4f6; }
+
+        /* High / Low Tide Card in the Bottom Area */
+        .bottom-tides-card {
+            width: 305px;
+            flex-shrink: 0;
+            background: #fafbfc;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .bottom-tides-header {
+            padding: 6px 10px;
+            background: #f1f3f5;
+            border-bottom: 1px solid #e1e4e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bottom-tides-header .title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #333;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .bottom-tides-header .current-time {
+            font-size: 10px;
+            color: #0969da;
+            font-weight: 600;
+            margin-top: 1px;
+        }
+
+        .bottom-tides-header .sub {
+            font-size: 10px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .bottom-tides-table-wrap {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 145px;
+            background: #ffffff;
+        }
+
+        .tides-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .tides-table th {
+            color: #008542;
+            font-weight: bold;
+            padding: 5px 8px;
+            border-bottom: 1px solid #c9d1d9;
+            background: #f6f8fa;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .tides-table th.col-time { text-align: left; }
+        .tides-table th.col-hl { text-align: center; }
+        .tides-table th.col-height { text-align: right; }
+
+        .tides-table td {
+            padding: 4px 8px;
+            color: #333;
+            border-bottom: 1px solid #eee;
+        }
+
+        .tides-table td.col-time { text-align: left; white-space: nowrap; }
+        .tides-table td.col-hl { text-align: center; font-weight: 600; }
+        .tides-table td.col-height { text-align: right; white-space: nowrap; }
+
+        .tides-table tr.is-next-tide td {
+            background-color: #eaf3ff;
+            font-weight: bold;
+            color: #0969da;
+        }
+
+        .tides-date-separator {
+            background: #f1f3f5;
+            font-weight: bold;
+            font-size: 9.5px;
+            color: #555;
+            padding: 3px 8px;
+            text-align: left;
+            border-bottom: 1px solid #e1e4e8;
+        }
+
+        @media (max-width: 1150px) {
+            .bottom-container {
+                flex-direction: column;
+            }
+            .bottom-tides-card {
+                width: 100%;
+            }
+            .bottom-tides-table-wrap {
+                max-height: 180px;
+            }
+        }
     </style>
 </head>
 <body>
 
 <div id="dashboard-wrapper">
+    <!-- Chart Main: Maximized Chart with Datums on the Right -->
     <div class="dashboard-main">
         <div class="chart-container">
             <canvas id="tideChart"></canvas>
@@ -159,127 +287,151 @@
         </div>
     </div>
 
-    <div class="controls-panel">
-        <!-- Col 1: Station & Date Range -->
-        <div class="control-col" style="flex: 1.3; min-width: 240px;">
-            <div class="control-group">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <label><b>Station Location</b></label>
-                    <span style="font-size: 10px; color: #57606a;">
-                        <span style="color: #0969da; font-weight: bold;">●</span> WL &amp; Predictions
-                        &nbsp;
-                        <span style="color: #8250df; font-weight: bold;">●</span> Predictions
-                    </span>
-                </div>
-                <div class="control-row" style="margin-bottom: 2px;">
-                    <select id="station-type-filter" style="flex: 1; font-size: 11px; padding: 3px 6px;">
-                        <option value="all">All Stations</option>
-                        <option value="wl">WL &amp; Predictions</option>
-                        <option value="pred">Predictions Only</option>
-                    </select>
-                    <select id="station-state-filter" style="flex: 1; font-size: 11px; padding: 3px 6px;">
-                        <option value="all">All States</option>
-                    </select>
-                </div>
-                <select id="station-select">
-                    <option value="9414290">Loading stations...</option>
-                </select>
-            </div>
-            <div class="control-row">
-                <div class="control-group" style="flex: 1;">
-                    <label>From:</label>
-                    <input type="date" id="start-date">
-                </div>
-                <div class="control-group" style="flex: 1;">
-                    <label>To:</label>
-                    <input type="date" id="end-date">
-                </div>
-            </div>
-        </div>
-
-        <!-- Col 2: Timezone, Units, Datum -->
-        <div class="control-col" style="flex: 1.15; min-width: 215px;">
-            <div class="control-group">
-                <label>Timezone</label>
-                <select id="tz-select" style="width: 100%;">
-                    <option value="station" selected>Station Local Time</option>
-                    <option value="system">Computer Time</option>
-                    <option value="utc">UTC (UTC±0)</option>
-                    <option value="America/New_York">Eastern Time (UTC-4)</option>
-                    <option value="America/Chicago">Central Time (UTC-5)</option>
-                    <option value="America/Denver">Mountain Time (UTC-6)</option>
-                    <option value="America/Los_Angeles">Pacific Time (UTC-7)</option>
-                    <option value="America/Anchorage">Alaska Time (UTC-8)</option>
-                    <option value="Pacific/Honolulu">Hawaii Time (UTC-10)</option>
-                </select>
-            </div>
-            <div class="control-row">
-                <div class="control-group" style="flex: 1;">
-                    <label>Units</label>
-                    <select id="units-select" style="width: 100%;">
-                        <option value="english">Standard (ft)</option>
-                        <option value="metric">Metric (m)</option>
+    <!-- Bottom Container: Parameter Controls + High/Low Table -->
+    <div class="bottom-container">
+        <div class="controls-panel">
+            <!-- Col 1: Station & Date Range -->
+            <div class="control-col" style="flex: 1.3; min-width: 230px;">
+                <div class="control-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label><b>Station Location</b></label>
+                        <span style="font-size: 10px; color: #57606a;">
+                            <span style="color: #0969da; font-weight: bold;">●</span> WL &amp; Predictions
+                            &nbsp;
+                            <span style="color: #8250df; font-weight: bold;">●</span> Predictions
+                        </span>
+                    </div>
+                    <div class="control-row" style="margin-bottom: 2px;">
+                        <select id="station-type-filter" style="flex: 1; font-size: 11px; padding: 3px 6px;">
+                            <option value="all">All Stations</option>
+                            <option value="wl">WL &amp; Predictions</option>
+                            <option value="pred">Predictions Only</option>
+                        </select>
+                        <select id="station-state-filter" style="flex: 1; font-size: 11px; padding: 3px 6px;">
+                            <option value="all">All States</option>
+                        </select>
+                    </div>
+                    <select id="station-select">
+                        <option value="9414290">Loading stations...</option>
                     </select>
                 </div>
-                <div class="control-group" style="flex: 1;">
-                    <label>Datum</label>
-                    <select id="datum-select" style="width: 100%;">
-                        <option value="MLLW">MLLW</option>
-                        <option value="MHW">MHW</option>
-                        <option value="MSL">MSL</option>
-                        <option value="STND">Station Datum</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- Col 3: Sun Angle & Date Shift -->
-        <div class="control-col" style="min-width: 165px;">
-            <div class="control-group">
-                <label class="control-row" style="cursor: pointer;">
-                    <input type="checkbox" id="sun-toggle" checked>
-                    <span>Min Sun Angle (&deg;)</span>
-                </label>
-                <input type="number" id="sun-angle" value="25" step="1" style="width: 100%;">
-            </div>
-            <div class="control-group">
-                <label>Shift Dates</label>
                 <div class="control-row">
-                    <button class="btn-secondary" onclick="shiftDates(-1)">⏮ Back 1D</button>
-                    <button class="btn-secondary" onclick="shiftDates(1)">Forward 1D ⏭</button>
+                    <div class="control-group" style="flex: 1;">
+                        <label>From:</label>
+                        <input type="date" id="start-date">
+                    </div>
+                    <div class="control-group" style="flex: 1;">
+                        <label>To:</label>
+                        <input type="date" id="end-date">
+                    </div>
                 </div>
+            </div>
+
+            <!-- Col 2: Timezone, Units, Datum -->
+            <div class="control-col" style="flex: 1.1; min-width: 200px;">
+                <div class="control-group">
+                    <label>Timezone</label>
+                    <select id="tz-select" style="width: 100%;">
+                        <option value="station" selected>Station Local Time</option>
+                        <option value="system">Computer Time</option>
+                        <option value="utc">UTC (UTC±0)</option>
+                        <option value="America/New_York">Eastern Time (UTC-4)</option>
+                        <option value="America/Chicago">Central Time (UTC-5)</option>
+                        <option value="America/Denver">Mountain Time (UTC-6)</option>
+                        <option value="America/Los_Angeles">Pacific Time (UTC-7)</option>
+                        <option value="America/Anchorage">Alaska Time (UTC-8)</option>
+                        <option value="Pacific/Honolulu">Hawaii Time (UTC-10)</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <div class="control-group" style="flex: 1;">
+                        <label>Units</label>
+                        <select id="units-select" style="width: 100%;">
+                            <option value="english">Standard (ft)</option>
+                            <option value="metric">Metric (m)</option>
+                        </select>
+                    </div>
+                    <div class="control-group" style="flex: 1;">
+                        <label>Datum</label>
+                        <select id="datum-select" style="width: 100%;">
+                            <option value="MLLW">MLLW</option>
+                            <option value="MHW">MHW</option>
+                            <option value="MSL">MSL</option>
+                            <option value="STND">Station Datum</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Col 3: Sun Angle & Date Shift -->
+            <div class="control-col" style="min-width: 165px;">
+                <div class="control-group">
+                    <label class="control-row" style="cursor: pointer;">
+                        <input type="checkbox" id="sun-toggle" checked>
+                        <span>Min Sun Angle (&deg;)</span>
+                    </label>
+                    <input type="number" id="sun-angle" value="25" step="1" style="width: 100%;">
+                </div>
+                <div class="control-group">
+                    <label>Shift Dates</label>
+                    <div class="control-row">
+                        <button class="btn-secondary" onclick="shiftDates(-1)" title="Go back 1 day">⏮ -1D</button>
+                        <button class="btn-secondary" onclick="goToToday()" title="Jump to today" style="font-weight: bold; color: #0969da;">Today</button>
+                        <button class="btn-secondary" onclick="shiftDates(1)" title="Go forward 1 day">+1D ⏭</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Col 4: Tide Window Highlight Tool & Horizontal Plot Button Below -->
+            <div class="control-col" style="flex: 1.1; min-width: 190px;">
+                <div class="control-group">
+                    <label class="control-row" style="cursor: pointer;">
+                        <input type="checkbox" id="window-toggle">
+                        <span><b>Highlight Tide Window</b></span>
+                    </label>
+                    <select id="window-target" style="width: 100%;">
+                        <option value="low" selected>Low Tide Only</option>
+                        <option value="high">High Tide Only</option>
+                        <option value="both">High & Low Tide</option>
+                    </select>
+                </div>
+                <div class="control-row">
+                    <div class="control-group" style="flex: 1;">
+                        <label title="Hours before High/Low tide">- Hours:</label>
+                        <input type="number" id="window-before" value="2.0" step="0.5" min="0" style="width: 100%;">
+                    </div>
+                    <div class="control-group" style="flex: 1;">
+                        <label title="Hours after High/Low tide">+ Hours:</label>
+                        <input type="number" id="window-after" value="0" step="0.5" min="0" style="width: 100%;">
+                    </div>
+                </div>
+                <!-- Horizontal Plot button spanning full width underneath Highlight Tide Window -->
+                <button class="btn-primary" style="width: 100%; height: 32px; margin-top: 2px; font-size: 13px;" onclick="loadDashboard()">↻ Plot</button>
             </div>
         </div>
 
-        <!-- Col 4: Tide Window Highlight Tool -->
-        <div class="control-col" style="flex: 1.1; min-width: 180px;">
-            <div class="control-group">
-                <label class="control-row" style="cursor: pointer;">
-                    <input type="checkbox" id="window-toggle">
-                    <span><b>Highlight Tide Window</b></span>
-                </label>
-                <select id="window-target" style="width: 100%;">
-                    <option value="low" selected>Low Tide Only</option>
-                    <option value="high">High Tide Only</option>
-                    <option value="both">High & Low Tide</option>
-                </select>
-            </div>
-            <div class="control-row">
-                <div class="control-group" style="flex: 1;">
-                    <label title="Hours before High/Low tide">- Hours:</label>
-                    <input type="number" id="window-before" value="2.0" step="0.5" min="0" style="width: 100%;">
+        <!-- Tide Table Card with Live Clock Header -->
+        <div class="bottom-tides-card">
+            <div class="bottom-tides-header">
+                <div>
+                    <div class="title">High / Low Tides</div>
+                    <div class="current-time" id="current-time-display">Current Time: Loading...</div>
                 </div>
-                <div class="control-group" style="flex: 1;">
-                    <label title="Hours after High/Low tide">+ Hours:</label>
-                    <input type="number" id="window-after" value="0" step="0.5" min="0" style="width: 100%;">
-                </div>
+                <span class="sub" id="tides-tz-label">(LST/LDT)</span>
             </div>
-        </div>
-
-        <!-- Col 5: Action Button -->
-        <div class="control-col" style="flex: 0 0 90px; justify-content: flex-end;">
-            <div class="control-group">
-                <button class="btn-primary" style="height: 36px;" onclick="loadDashboard()">↻ Plot</button>
+            <div class="bottom-tides-table-wrap">
+                <table class="tides-table" id="tides-table">
+                    <thead>
+                        <tr>
+                            <th class="col-time">Time</th>
+                            <th class="col-hl">H/L</th>
+                            <th class="col-height" id="tbl-col-height">Height</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tides-table-body">
+                        <tr><td colspan="3" style="text-align: center; color: #888; padding: 12px;">Loading...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -351,29 +503,38 @@
         }
     };
 
-    // Determines the station's true local IANA time zone
     function resolveStationTimeZone(stationMeta) {
         if (!stationMeta) return 'America/New_York';
 
-        if (stationMeta.timezone) {
-            try {
-                if (luxon.DateTime.now().setZone(stationMeta.timezone).isValid) {
-                    return stationMeta.timezone;
-                }
-            } catch (e) {}
+        const tzAbbrMap = {
+            'EST': 'America/New_York',    'EDT': 'America/New_York',
+            'CST': 'America/Chicago',     'CDT': 'America/Chicago',
+            'MST': 'America/Denver',      'MDT': 'America/Denver',
+            'PST': 'America/Los_Angeles', 'PDT': 'America/Los_Angeles',
+            'AKST': 'America/Anchorage',  'AKDT': 'America/Anchorage',
+            'HST': 'Pacific/Honolulu',    'HDT': 'Pacific/Honolulu',
+            'AST': 'America/Puerto_Rico',
+            'CHST': 'Pacific/Guam',       'SST': 'Pacific/Pago_Pago',
+            'GMT': 'utc',                 'UTC': 'utc'
+        };
 
-            const tzAbbrMap = {
-                'EST': 'America/New_York', 'EDT': 'America/New_York',
-                'CST': 'America/Chicago',  'CDT': 'America/Chicago',
-                'MST': 'America/Denver',   'MDT': 'America/Denver',
-                'PST': 'America/Los_Angeles', 'PDT': 'America/Los_Angeles',
-                'AKST': 'America/Anchorage', 'AKDT': 'America/Anchorage',
-                'HST': 'Pacific/Honolulu', 'AST': 'America/Puerto_Rico',
-                'CHST': 'Pacific/Guam', 'SST': 'Pacific/Pago_Pago',
-                'GMT': 'utc', 'UTC': 'utc'
-            };
-            const mapped = tzAbbrMap[stationMeta.timezone.toUpperCase()];
-            if (mapped) return mapped;
+        if (stationMeta.timezone) {
+            const upperTz = stationMeta.timezone.trim().toUpperCase();
+
+            if (tzAbbrMap[upperTz]) {
+                if (upperTz === 'MST' && (stationMeta.state === 'AZ' || stationMeta.observedst === false)) {
+                    return 'America/Phoenix';
+                }
+                return tzAbbrMap[upperTz];
+            }
+
+            if (stationMeta.timezone.includes('/')) {
+                try {
+                    if (luxon.DateTime.now().setZone(stationMeta.timezone).isValid) {
+                        return stationMeta.timezone;
+                    }
+                } catch (e) {}
+            }
         }
 
         const stateMap = {
@@ -409,19 +570,20 @@
             return stateMap[stationMeta.state.toUpperCase()];
         }
 
-        if (typeof stationMeta.timezonecorr === 'number') {
+        if (typeof stationMeta.timezonecorr === 'number' || typeof stationMeta.timezonecorr === 'string') {
+            const corrStr = String(stationMeta.timezonecorr);
             const corrMap = {
-                '-4': 'America/Puerto_Rico',
+                '-4': (stationMeta.observedst === false) ? 'America/Puerto_Rico' : 'America/Halifax',
                 '-5': 'America/New_York',
                 '-6': 'America/Chicago',
-                '-7': 'America/Denver',
+                '-7': (stationMeta.observedst === false) ? 'America/Phoenix' : 'America/Denver',
                 '-8': 'America/Los_Angeles',
                 '-9': 'America/Anchorage',
                 '-10': 'Pacific/Honolulu',
                 '10': 'Pacific/Guam'
             };
-            if (corrMap[String(stationMeta.timezonecorr)]) {
-                return corrMap[String(stationMeta.timezonecorr)];
+            if (corrMap[corrStr]) {
+                return corrMap[corrStr];
             }
         }
 
@@ -437,7 +599,6 @@
         return 'America/New_York';
     }
 
-    // Updates timezone dropdown labels with dynamically calculated UTC offsets
     function updateTimeZoneDropdownLabels(stationMeta) {
         const tzSelect = document.getElementById("tz-select");
         const now = luxon.DateTime.now();
@@ -521,16 +682,6 @@
         return curve;
     }
 
-    function addDays(dateStr, days) {
-        const d = new Date(dateStr.replace(/-/g, '/') + " 12:00:00");
-        d.setDate(d.getDate() + days);
-        return d.toISOString().split('T')[0];
-    }
-
-    function formatApiDate(dateStr) {
-        return dateStr.replace(/-/g, '');
-    }
-
     function populateStateFilter(stations) {
         const stateSelect = document.getElementById('station-state-filter');
         const states = new Set();
@@ -577,10 +728,86 @@
         }
     }
 
+    function renderBottomTidesTable(rawHilo, targetZone, targetZoneAbbr, tzMode, targetDatum, unitLabel, xMinTime, xMaxTime) {
+        const tbodyEl = document.getElementById("tides-table-body");
+        const tzLabelEl = document.getElementById("tides-tz-label");
+        const heightHeaderEl = document.getElementById("tbl-col-height");
+        const currentTimeEl = document.getElementById("current-time-display");
+        
+        const tzHeaderLabel = (tzMode === 'station') ? '(LST/LDT)' : `(${targetZoneAbbr})`;
+        tzLabelEl.innerText = tzHeaderLabel;
+        heightHeaderEl.innerText = `Height (${targetDatum})`;
+
+        // Live display of Current Time in station/target timezone
+        const nowDT = luxon.DateTime.now().setZone(targetZone);
+        if (currentTimeEl) {
+            currentTimeEl.innerText = `Current Time: ${nowDT.toFormat('LLL d, h:mm a')} ${targetZoneAbbr}`;
+        }
+
+        const visibleTides = (rawHilo || [])
+            .filter(pt => pt.x >= xMinTime && pt.x <= xMaxTime)
+            .sort((a, b) => a.x - b.x);
+
+        const nowMs = Date.now();
+        let nextTide = (rawHilo || []).find(pt => pt.x >= nowMs);
+
+        if (visibleTides.length === 0) {
+            tbodyEl.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #888; padding: 15px;">No events in range.</td></tr>`;
+            return;
+        }
+
+        let currentDayKey = "";
+        let rowsHtml = "";
+
+        visibleTides.forEach(pt => {
+            const dt = luxon.DateTime.fromMillis(pt.x, { zone: targetZone });
+            const dayKey = dt.toFormat('yyyy-MM-dd');
+
+            if (dayKey !== currentDayKey) {
+                currentDayKey = dayKey;
+                rowsHtml += `<tr><td colspan="3" class="tides-date-separator">${dt.toFormat('cccc, LLL d')}</td></tr>`;
+            }
+
+            const isNext = (nextTide && pt.x === nextTide.x);
+            const timeStr = dt.toFormat('hh:mm a');
+            const hlStr = (pt.type === 'High' || pt.type === 'H') ? 'High' : 'Low';
+            const color = (pt.type === 'High' || pt.type === 'H') ? '#2e7d32' : '#0277bd'; 
+            
+            rowsHtml += `
+                <tr class="${isNext ? 'is-next-tide' : ''}">
+                    <td class="col-time">${timeStr}</td>
+                    <td class="col-hl" style="color: ${color};">${hlStr}</td>
+                    <td class="col-height">${pt.y.toFixed(2)} ${unitLabel}</td>
+                </tr>
+            `;
+        });
+
+        tbodyEl.innerHTML = rowsHtml;
+    }
+
+    function shiftDates(days) {
+        const startInput = document.getElementById('start-date');
+        const endInput = document.getElementById('end-date');
+        
+        const startDT = luxon.DateTime.fromISO(startInput.value).plus({ days: days });
+        const endDT = luxon.DateTime.fromISO(endInput.value).plus({ days: days });
+        
+        startInput.value = startDT.toFormat('yyyy-MM-dd');
+        endInput.value = endDT.toFormat('yyyy-MM-dd');
+        loadDashboard();
+    }
+
+    function goToToday() {
+        const todayStr = luxon.DateTime.now().toFormat('yyyy-MM-dd');
+        document.getElementById('start-date').value = todayStr;
+        document.getElementById('end-date').value = todayStr;
+        loadDashboard();
+    }
+
     async function init() {
         const urlParams = new URLSearchParams(window.location.search);
         
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = luxon.DateTime.now().toFormat('yyyy-MM-dd');
         document.getElementById('start-date').value = urlParams.get('start') || todayStr;
         document.getElementById('end-date').value = urlParams.get('end') || todayStr;
 
@@ -677,7 +904,6 @@
                 select.appendChild(opt);
             });
             
-            // Default station 9414290 (San Francisco, CA)
             select.value = urlParams.get('station') || "9414290";
             lastValidStationId = select.value;
             
@@ -716,7 +942,6 @@
                 }
             });
 
-            // Automatically clear the current station selection as soon as the user starts typing
             stationSelectInstance.control_input.addEventListener('keydown', function(e) {
                 const isPrintable = e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
                 if (isPrintable || e.key === 'Backspace' || e.key === 'Delete') {
@@ -726,7 +951,6 @@
                 }
             });
 
-            // Fallback for paste, mobile input, and virtual keyboards
             stationSelectInstance.control_input.addEventListener('input', function() {
                 if (this.value && stationSelectInstance.items.length > 0) {
                     const typed = this.value;
@@ -745,7 +969,6 @@
                 }
             });
 
-            // If the user clicks away without selecting a new station, restore the currently plotted station
             stationSelectInstance.on('blur', function() {
                 if (!stationSelectInstance.getValue() && lastValidStationId) {
                     stationSelectInstance.setValue(lastValidStationId, true);
@@ -757,21 +980,6 @@
         } catch (err) {
             console.error("Failed to load stations list", err);
         }
-    }
-
-    function shiftDates(days) {
-        const startInput = document.getElementById('start-date');
-        const endInput = document.getElementById('end-date');
-        
-        let start = new Date(startInput.value);
-        let end = new Date(endInput.value);
-        
-        start.setDate(start.getDate() + days);
-        end.setDate(end.getDate() + days);
-        
-        startInput.valueAsDate = start;
-        endInput.valueAsDate = end;
-        loadDashboard();
     }
 
     async function loadDashboard() {
@@ -798,7 +1006,6 @@
         const windowBefore = parseFloat(document.getElementById("window-before").value) || 0;
         const windowAfter = parseFloat(document.getElementById("window-after").value) || 0;
 
-        // Safely update URL params
         try {
             if (window.location.protocol.startsWith('http') && !window.location.href.startsWith('blob:')) {
                 const newUrl = new URL(window.location);
@@ -819,13 +1026,11 @@
         } catch (e) {}
 
         try {
-            // First retrieve station metadata to resolve true station timezone
             const metaRes = await fetch(`${META_URL}/${stationId}.json`).then(r => r.json()).catch(() => ({}));
             const stationMeta = (metaRes.stations && metaRes.stations[0]) ? metaRes.stations[0] : (stationCatalogMap[stationId] || { id: stationId, name: 'Station', state: '', lng: 0, lat: 0 });
             
             updateTimeZoneDropdownLabels(stationMeta);
 
-            // Determine active target timezone for chart display
             let targetZone = 'utc';
             if (tzMode === 'station') {
                 targetZone = resolveStationTimeZone(stationMeta);
@@ -837,24 +1042,19 @@
 
             const targetZoneAbbr = luxon.DateTime.now().setZone(targetZone).toFormat('ZZZZ');
 
-            // Exact local range bounds expressed in target zone
             const startDT = luxon.DateTime.fromISO(startDateStr + "T00:00:00", { zone: targetZone });
             const endDT = luxon.DateTime.fromISO(endDateStr + "T23:59:59.999", { zone: targetZone });
             const xMinTime = startDT.toMillis();
             const xMaxTime = endDT.toMillis();
 
-            // Buffer NOAA GMT query by 1 day on each side so all requested local hours are covered
             const gmtApiStart = startDT.minus({ days: 1 }).toUTC().toFormat('yyyyMMdd');
             const gmtApiEnd = endDT.plus({ days: 1 }).toUTC().toFormat('yyyyMMdd');
-
-            // Subordinate High/Low interpolation needs a 2-day buffer for turning points
             const subordinateStart = startDT.minus({ days: 2 }).toUTC().toFormat('yyyyMMdd');
             const subordinateEnd = endDT.plus({ days: 2 }).toUTC().toFormat('yyyyMMdd');
 
             const nowMs = Date.now();
             const showCurrentTime = (nowMs >= xMinTime && nowMs <= xMaxTime);
 
-            // Fetch data concurrently in GMT
             const [datumRes, standardPredRes, verRes, hiloRes] = await Promise.all([
                 fetch(`${META_URL}/${stationId}/datums.json?units=${units}`).then(r => r.json()).catch(() => ({})),
                 fetch(`${BASE_URL}?station=${stationId}&begin_date=${gmtApiStart}&end_date=${gmtApiEnd}&product=predictions&datum=${targetDatum}&units=${units}&time_zone=gmt&format=json`).then(r => r.json()).catch(() => ({})),
@@ -886,10 +1086,7 @@
                 });
             }
 
-            let predData = [];
-            let hiloMarkers = [];
             let rawHilo = [];
-
             if (hiloRes.predictions && Array.isArray(hiloRes.predictions)) {
                 rawHilo = hiloRes.predictions.map(d => ({
                     x: parseGmtTime(d.t),
@@ -898,62 +1095,61 @@
                 }));
             }
 
-            if (isSubordinate) {
-                predData = interpolateTideCurve(rawHilo, xMinTime, xMaxTime, 10);
-                hiloMarkers = rawHilo.filter(pt => pt.x >= xMinTime && pt.x <= xMaxTime);
-            } else if (predRes.predictions && Array.isArray(predRes.predictions)) {
-                predData = predRes.predictions
-                    .map(d => ({ x: parseGmtTime(d.t), y: parseFloat(d.v) }))
-                    .filter(p => p.x >= xMinTime && p.x <= xMaxTime);
-            }
-
-            document.getElementById("datum-baseline-label").innerText = `(${targetDatum})`;
-
             const longitude = stationMeta.lng || 0;
             const latitude = stationMeta.lat || 0;
             const fullStationTitle = `${stationMeta.id}, ${stationMeta.name} ${stationMeta.state || ''}`;
 
-            // RSD Tolerance Calculation
             let computed_range = 0, range_type = "", tolerance = 0, errorMsg = "";
             const isWestCoast = (longitude <= -114 || longitude > 0);
 
             if (isWestCoast) {
                 if (mhw !== null && mllw !== null) {
                     computed_range = mhw - mllw;
-                    range_type = "Diurnal Range (MHW-MLLW, Published)";
+                    range_type = "Diurnal Range (MHW-MLLW)";
                 } else if (mn !== null) {
                     computed_range = mn;
-                    range_type = "Mean Range (MN, Published)";
+                    range_type = "Mean Range (MN)";
                 }
             } else {
                 if (mn !== null) {
                     computed_range = mn;
-                    range_type = "Mean Range (MN, Published)";
+                    range_type = "Mean Range (MN)";
                 } else if (mhw !== null && mllw !== null) {
                     computed_range = mhw - mllw;
-                    range_type = "Computed Range (MHW-MLLW, Published)";
+                    range_type = "Computed Range (MHW-MLLW)";
                 }
             }
 
             if (computed_range > 0) {
                 const rangeThreshold = isMetric ? 1.524 : 5.0; 
                 const defaultTol = isMetric ? 0.1524 : 0.5;    
-
-                if (computed_range <= rangeThreshold) {
-                    tolerance = defaultTol;
-                } else {
-                    tolerance = computed_range * 0.10;
-                }
+                tolerance = (computed_range <= rangeThreshold) ? defaultTol : computed_range * 0.10;
             } else {
-                errorMsg = "Tolerance not computed: No published tidal datums (MN or MHW/MLLW) are available for this station.";
+                errorMsg = "Tolerance not computed: No published datums.";
             }
 
-            if (isSubordinate && targetDatum === "MHW" && computed_range > 0) {
-                predData.forEach(p => p.y -= computed_range);
-                hiloMarkers.forEach(p => p.y -= computed_range);
+            let predData = [];
+            let hiloMarkers = [];
+
+            if (isSubordinate) {
+                predData = interpolateTideCurve(rawHilo, xMinTime, xMaxTime, 10);
+                hiloMarkers = rawHilo.filter(pt => pt.x >= xMinTime && pt.x <= xMaxTime);
+                if (targetDatum === "MHW" && computed_range > 0) {
+                    predData.forEach(p => p.y -= computed_range);
+                    hiloMarkers.forEach(p => p.y -= computed_range);
+                    rawHilo.forEach(p => p.y -= computed_range);
+                }
+            } else if (predRes.predictions && Array.isArray(predRes.predictions)) {
+                predData = predRes.predictions
+                    .map(d => ({ x: parseGmtTime(d.t), y: parseFloat(d.v) }))
+                    .filter(p => p.x >= xMinTime && p.x <= xMaxTime);
+                hiloMarkers = rawHilo.filter(pt => pt.x >= xMinTime && pt.x <= xMaxTime);
             }
 
-            // Solar Angle Masking using absolute UTC timestamps
+            document.getElementById("datum-baseline-label").innerText = `(${targetDatum})`;
+
+            renderBottomTidesTable(rawHilo, targetZone, targetZoneAbbr, tzMode, targetDatum, unitLabel, xMinTime, xMaxTime);
+
             const darkBoxes = [];
             if (showSun && (latitude !== 0 || longitude !== 0)) {
                 let inDarkZone = false;
@@ -978,12 +1174,9 @@
                     }
                     currentMs += stepMs;
                 }
-                if (inDarkZone) {
-                    darkBoxes.push({ start: darkStart, end: xMaxTime });
-                }
+                if (inDarkZone) darkBoxes.push({ start: darkStart, end: xMaxTime });
             }
 
-            // Tide Window Highlight Calculation
             const tideWindowBoxes = [];
             if (showWindow && rawHilo.length > 0) {
                 const beforeMs = windowBefore * 3600 * 1000;
@@ -1010,7 +1203,6 @@
                 });
             }
 
-            // Datum Sidebar Lines across visible window
             let datumDatasets = [];
             activeDatumObjects = [];
             
@@ -1073,25 +1265,25 @@
             let subtitleLines = [];
             if (errorMsg) {
                 let msg = `Tolerance Status: ${errorMsg}`;
-                if (isSubordinate) msg += " (Subordinate Station)";
+                if (isSubordinate) msg += " (Subordinate)";
                 subtitleLines.push(msg);
             } else {
-                let line = `${range_type}: ${computed_range.toFixed(2)} ${unitLabel}  |  RSD Computed Tolerance: ±${tolerance.toFixed(2)} ${unitLabel}`;
+                let line = `${range_type}: ${computed_range.toFixed(2)} ${unitLabel}  |  RSD Tolerance: ±${tolerance.toFixed(2)} ${unitLabel}`;
                 if (isSubordinate) {
-                    line += `  (Subordinate Station)`;
+                    line += `  (Subordinate)`;
                 } else if (verData.length === 0 && prelimData.length === 0 && predData.length > 0) {
-                    line += `  (Predictions Only - Non-NWLON)`;
+                    line += `  (Predictions Only)`;
                 }
                 subtitleLines.push(line);
             }
 
             buildDatumsSidebar(activeDatumObjects);
-            renderChart(chartTitleLines, subtitleLines, predData, hiloMarkers, verData, prelimData, datumDatasets, targetDatum, tolerance, unitLabel, (errorMsg === ""), showCurrentTime, darkBoxes, isSubordinate, tideWindowBoxes, windowBefore, windowAfter, targetZone, targetZoneAbbr, xMinTime, xMaxTime);
+            renderChart(chartTitleLines, subtitleLines, predData, hiloMarkers, verData, prelimData, datumDatasets, targetDatum, tolerance, unitLabel, (errorMsg === ""), showCurrentTime, darkBoxes, isSubordinate, tideWindowBoxes, windowBefore, windowAfter, targetZone, targetZoneAbbr, xMinTime, xMaxTime, nowMs);
 
         } catch (error) {
             console.error("Dashboard failed to load:", error);
             const errorTitle = ["NOAA/NOS/CO-OPS", "Error loading station data."];
-            renderChart(errorTitle, [], [], [], [], [], [], targetDatum, 0, "ft", false, false, [], false, [], 0, 0, 'utc', 'UTC', 0, 0);
+            renderChart(errorTitle, [], [], [], [], [], [], targetDatum, 0, "ft", false, false, [], false, [], 0, 0, 'utc', 'UTC', 0, 0, 0);
         }
     }
 
@@ -1140,7 +1332,7 @@
         });
     }
 
-    function renderChart(titleLines, subtitleLines, predData, hiloMarkers, verData, prelimData, datumDatasets, currentDatum, tolerance, unitLabel, hasTolerance, showCurrentTime, darkBoxes, isSubordinate, tideWindowBoxes, winBefore, winAfter, targetZone, targetZoneAbbr, xMinTime, xMaxTime) {
+    function renderChart(titleLines, subtitleLines, predData, hiloMarkers, verData, prelimData, datumDatasets, currentDatum, tolerance, unitLabel, hasTolerance, showCurrentTime, darkBoxes, isSubordinate, tideWindowBoxes, winBefore, winAfter, targetZone, targetZoneAbbr, xMinTime, xMaxTime, nowMs) {
         const ctx = document.getElementById('tideChart').getContext('2d');
         if (chartInstance) chartInstance.destroy();
 
@@ -1199,19 +1391,22 @@
         }
 
         if (showCurrentTime) {
+            const formattedCurrent = luxon.DateTime.now().setZone(targetZone).toFormat('h:mm a');
             annotationConfig.annotations.currentTimeLine = {
                 type: 'line',
-                scaleID: 'x',
-                value: Date.now(), 
+                xMin: nowMs,
+                xMax: nowMs,
                 borderColor: '#000000', 
                 borderWidth: 2,
+                borderDash: [4, 4],
                 label: {
                     display: true,
-                    content: 'Current Time',
-                    position: 'start', 
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    content: `Current Time (${formattedCurrent})`,
+                    position: 'end', // Positioned at the top of the chart line
+                    backgroundColor: 'rgba(0, 0, 0, 0.75)',
                     color: '#fff',
-                    font: { size: 11, weight: 'bold' }
+                    font: { size: 10, weight: 'bold' },
+                    padding: 4
                 }
             };
         }
