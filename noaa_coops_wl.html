@@ -738,7 +738,6 @@
         tzLabelEl.innerText = tzHeaderLabel;
         heightHeaderEl.innerText = `Height (${targetDatum})`;
 
-        // Live display of Current Time in station/target timezone
         const nowDT = luxon.DateTime.now().setZone(targetZone);
         if (currentTimeEl) {
             currentTimeEl.innerText = `Current Time: ${nowDT.toFormat('LLL d, h:mm a')} ${targetZoneAbbr}`;
@@ -1086,15 +1085,6 @@
                 });
             }
 
-            let rawHilo = [];
-            if (hiloRes.predictions && Array.isArray(hiloRes.predictions)) {
-                rawHilo = hiloRes.predictions.map(d => ({
-                    x: parseGmtTime(d.t),
-                    y: parseFloat(d.v),
-                    type: d.type === 'H' ? 'High' : (d.type === 'L' ? 'Low' : d.type)
-                }));
-            }
-
             const longitude = stationMeta.lng || 0;
             const latitude = stationMeta.lat || 0;
             const fullStationTitle = `${stationMeta.id}, ${stationMeta.name} ${stationMeta.state || ''}`;
@@ -1128,22 +1118,54 @@
                 errorMsg = "Tolerance not computed: No published datums.";
             }
 
+            // Parse raw High/Low predictions (always fetched in MLLW from NOAA)
+            let rawHilo = [];
+            if (hiloRes.predictions && Array.isArray(hiloRes.predictions)) {
+                rawHilo = hiloRes.predictions.map(d => ({
+                    x: parseGmtTime(d.t),
+                    y: parseFloat(d.v),
+                    type: d.type === 'H' ? 'High' : (d.type === 'L' ? 'Low' : d.type)
+                }));
+            }
+
+            // Universal vertical datum offset calculation from MLLW to targetDatum
+            let datumShift = 0;
+            if (mllw !== null && selectedDatumValue !== null) {
+                datumShift = selectedDatumValue - mllw;
+            } else if (computed_range > 0) {
+                if (targetDatum === "MHW") {
+                    datumShift = computed_range;
+                } else if (targetDatum === "MSL" || targetDatum === "MTL") {
+                    datumShift = computed_range / 2;
+                } else if (targetDatum === "MLLW") {
+                    datumShift = 0;
+                }
+            }
+
+            // Apply datum shift once to rawHilo
+            if (datumShift !== 0) {
+                rawHilo.forEach(pt => {
+                    pt.y -= datumShift;
+                });
+            }
+
             let predData = [];
             let hiloMarkers = [];
 
             if (isSubordinate) {
+                // Interpolate curve from the already shifted rawHilo
                 predData = interpolateTideCurve(rawHilo, xMinTime, xMaxTime, 10);
-                hiloMarkers = rawHilo.filter(pt => pt.x >= xMinTime && pt.x <= xMaxTime);
-                if (targetDatum === "MHW" && computed_range > 0) {
-                    predData.forEach(p => p.y -= computed_range);
-                    hiloMarkers.forEach(p => p.y -= computed_range);
-                    rawHilo.forEach(p => p.y -= computed_range);
-                }
+                hiloMarkers = rawHilo
+                    .filter(pt => pt.x >= xMinTime && pt.x <= xMaxTime)
+                    .map(pt => ({ x: pt.x, y: pt.y, type: pt.type }));
             } else if (predRes.predictions && Array.isArray(predRes.predictions)) {
+                // Standard station predictions already come in targetDatum from NOAA
                 predData = predRes.predictions
                     .map(d => ({ x: parseGmtTime(d.t), y: parseFloat(d.v) }))
                     .filter(p => p.x >= xMinTime && p.x <= xMaxTime);
-                hiloMarkers = rawHilo.filter(pt => pt.x >= xMinTime && pt.x <= xMaxTime);
+                hiloMarkers = rawHilo
+                    .filter(pt => pt.x >= xMinTime && pt.x <= xMaxTime)
+                    .map(pt => ({ x: pt.x, y: pt.y, type: pt.type }));
             }
 
             document.getElementById("datum-baseline-label").innerText = `(${targetDatum})`;
@@ -1402,7 +1424,7 @@
                 label: {
                     display: true,
                     content: `Current Time (${formattedCurrent})`,
-                    position: 'end', // Positioned at the top of the chart line
+                    position: 'end',
                     backgroundColor: 'rgba(0, 0, 0, 0.75)',
                     color: '#fff',
                     font: { size: 10, weight: 'bold' },
